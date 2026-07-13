@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sanctum Fabrics — Storefront
+
+A lightweight Next.js storefront for Sanctum Fabrics: browse the catalog, order
+via WhatsApp. Built to sit in front of `drista-core-platform-backend`'s
+existing `/ecommerce` module (product catalog, categories) — no cart/checkout
+yet by design; see "Why no cart" below.
+
+## Status: running on sample data
+
+Nothing here is wired to a live tenant yet. `lib/dristaService.ts` calls the
+real backend, but until `.env.local` has real credentials it always returns
+an empty catalog, and every page falls back to `lib/sampleProducts.ts` (fake
+products with SVG swatch placeholders, clearly labeled "Sample catalog shown"
+in the UI).
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Cutting over to the real catalog
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Onboard Sanctum Fabrics as a tenant on `drista-core-platform-backend`
+   (or reuse an existing one) and get its `tenant_id` + an API key with
+   access to `/ecommerce/*`.
+2. Enter her real products into the Item Master (name, price, images —
+   `ItemMaster` + `ItemImage` models) so `GET /ecommerce/products` returns
+   real data.
+3. Copy `.env.local.example` to `.env.local` and fill in
+   `DRISTA_API_KEY` / `NEXT_PUBLIC_TENANT_ID`.
+4. Restart the dev server. `getProducts()` will now return real items, the
+   "Sample catalog shown" notice disappears, and every page (home, catalog,
+   product detail) switches over automatically — no code changes needed.
+5. Replace the placeholder business details in `app/config/config.ts`
+   (search for `TODO`) — real phone/WhatsApp number, address, Instagram
+   handle.
 
-## Learn More
+## Why no cart/checkout yet
 
-To learn more about Next.js, take a look at the following resources:
+The backend's `/ecommerce/checkout` endpoint exists but has no payment
+gateway wired into it yet (Razorpay integration would need to be built).
+Rather than block launch on that, this site uses a **WhatsApp-order** flow:
+every product has an "Order on WhatsApp" button that opens a pre-filled
+message (product name + price) to her WhatsApp number. This gets her selling
+from day one; a real cart + Razorpay checkout can be layered in later against
+the same backend models once order volume justifies the extra engineering.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `lib/dristaService.ts` — API client for the backend's `/ecommerce` and
+  `/tenants/profile` endpoints. Mirrors the pattern already proven in
+  `dulhan-beauty-parlour/lib/dristaService.ts`.
+- `lib/sampleProducts.ts` — placeholder catalog, same shape as the real API.
+- `lib/whatsapp.ts` — builds `wa.me` links with pre-filled order messages.
+- `app/config/config.ts` — business info, palette, SEO. Edit this first.
+- `app/products/`, `app/products/[id]/` — catalog grid and product detail.
+- `app/contact/` — WhatsApp/phone/address contact page.
+# sanctum-fabrics
