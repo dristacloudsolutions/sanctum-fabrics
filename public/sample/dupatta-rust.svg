@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 750" width="600" height="750">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c1613f"/>
+      <stop offset="100%" stop-color="#8f3f26"/>
+    </linearGradient>
+    <pattern id="weave" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="14" stroke="#ffffff" stroke-opacity="0.06" stroke-width="6"/>
+    </pattern>
+  </defs>
+  <rect width="600" height="750" fill="url(#g)"/>
+  <rect width="600" height="750" fill="url(#weave)"/>
+  <text x="300" y="385" font-family="Georgia, serif" font-size="26" fill="#f6e2c6" fill-opacity="0.9" text-anchor="middle" letter-spacing="4">SANCTUM FABRICS</text>
+  <text x="300" y="415" font-family="Georgia, serif" font-size="15" fill="#ffffff" fill-opacity="0.6" text-anchor="middle" letter-spacing="2">BLOCK-PRINT DUPATTA</text>
+</svg>

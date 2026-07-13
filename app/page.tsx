@@ -1,65 +1,103 @@
-import Image from "next/image";
+import Link from 'next/link';
+import { ArrowRight, MessageCircle } from 'lucide-react';
+import ProductCard from './components/ProductCard';
+import config from './config/config';
+import { getProducts } from '@/lib/dristaService';
+import { sampleProducts } from '@/lib/sampleProducts';
+import { buildWhatsAppLink } from '@/lib/whatsapp';
 
-export default function Home() {
+export default async function Home() {
+  const liveProducts = await getProducts();
+  const products = liveProducts.length > 0 ? liveProducts : sampleProducts;
+  const featured = products.slice(0, 4);
+  const usingSample = liveProducts.length === 0;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div>
+      {/* Hero */}
+      <section className="border-b border-[color:var(--border)] bg-[color:var(--cream)]">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-20 md:grid-cols-2 md:py-28">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--accent)]">
+              Handloom &amp; Artisan Textiles
+            </p>
+            <h1 className="mt-4 font-serif text-4xl leading-tight text-[color:var(--ink)] md:text-5xl">
+              {config.business.tagline}
+            </h1>
+            <p className="mt-5 max-w-md text-base leading-relaxed text-[color:var(--ink)]/70">
+              {config.business.description}
+            </p>
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Link
+                href="/products"
+                className="inline-flex items-center gap-2 rounded-full bg-[color:var(--primary)] px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+              >
+                Browse the Catalog <ArrowRight size={16} />
+              </Link>
+              <a
+                href={buildWhatsAppLink("Hi Sanctum Fabrics, I'd like to know more about your collection.")}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-[color:var(--primary)] px-6 py-3 text-sm font-semibold text-[color:var(--primary)] transition-colors hover:bg-[color:var(--primary)] hover:text-white"
+              >
+                <MessageCircle size={16} /> Chat on WhatsApp
+              </a>
+            </div>
+          </div>
+          <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-gradient-to-br from-[color:var(--primary)] to-[#1a2340]">
+            <div className="flex h-full items-center justify-center px-8 text-center">
+              <p className="font-serif text-2xl text-[#e8c88a]/90">
+                Every weave tells
+                <br />a story
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured products */}
+      <section className="mx-auto max-w-6xl px-5 py-20">
+        <div className="mb-10 flex items-end justify-between">
+          <div>
+            <h2 className="font-serif text-2xl text-[color:var(--ink)] md:text-3xl">Featured Pieces</h2>
+            {usingSample && (
+              <p className="mt-1 text-xs text-[color:var(--ink)]/40">
+                Sample catalog shown — connect the live catalog in lib/dristaService.ts once onboarded.
+              </p>
+            )}
+          </div>
+          <Link href="/products" className="text-sm font-semibold text-[color:var(--accent)] hover:underline">
+            View all →
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 gap-5 md:grid-cols-4">
+          {featured.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      </section>
+
+      {/* Brand story */}
+      <section className="border-t border-[color:var(--border)] bg-white">
+        <div className="mx-auto max-w-3xl px-5 py-20 text-center">
+          <h2 className="font-serif text-2xl text-[color:var(--ink)] md:text-3xl">
+            Crafted by hand, chosen with care
+          </h2>
+          <p className="mt-5 leading-relaxed text-[color:var(--ink)]/70">
+            Each piece at {config.business.name} is sourced directly from artisan clusters, preserving
+            traditional techniques passed down through generations. When you order with us, you&apos;re
+            supporting the hands behind every thread.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
           <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            href={buildWhatsAppLink("Hi Sanctum Fabrics, I'd like to place an order.")}
             target="_blank"
             rel="noopener noreferrer"
+            className="mt-8 inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
+            <MessageCircle size={16} /> Order on WhatsApp
           </a>
         </div>
-      </main>
+      </section>
     </div>
   );
 }
