@@ -5,6 +5,7 @@ import { ArrowLeft, MessageCircle } from 'lucide-react';
 import { getProduct } from '@/lib/dristaService';
 import { sampleProducts } from '@/lib/sampleProducts';
 import { buildWhatsAppLink, productOrderMessage } from '@/lib/whatsapp';
+import AddToCartPanel from './AddToCartPanel';
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -41,25 +42,30 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             </p>
           )}
           <h1 className="mt-2 font-serif text-3xl text-[color:var(--ink)]">{product.name}</h1>
-          {price !== undefined && (
-            <p className="mt-3 text-2xl font-semibold text-[color:var(--accent)]">
-              ₹{price.toLocaleString('en-IN')}
-            </p>
-          )}
           {product.description && (
-            <p className="mt-6 leading-relaxed text-[color:var(--ink)]/70">{product.description}</p>
+            <p className="mt-4 leading-relaxed text-[color:var(--ink)]/70">{product.description}</p>
+          )}
+
+          {liveProduct ? (
+            <AddToCartPanel product={liveProduct} />
+          ) : (
+            price !== undefined && (
+              <p className="mt-3 text-2xl font-semibold text-[color:var(--accent)]">
+                ₹{price.toLocaleString('en-IN')}
+              </p>
+            )
           )}
 
           <a
             href={buildWhatsAppLink(productOrderMessage(product.name, price))}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-8 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 hover:bg-emerald-600"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 hover:bg-emerald-600"
           >
-            <MessageCircle size={16} /> Order on WhatsApp
+            <MessageCircle size={16} /> Order on WhatsApp instead
           </a>
           <p className="mt-3 text-xs text-[color:var(--ink)]/40">
-            Opens WhatsApp with this item pre-filled — confirm size, quantity, and delivery details there.
+            Prefer WhatsApp? This opens a chat with the item pre-filled — confirm size, quantity, and delivery details there.
           </p>
         </div>
       </div>
