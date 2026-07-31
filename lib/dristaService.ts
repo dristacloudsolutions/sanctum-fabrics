@@ -18,6 +18,7 @@ export type ProductVariant = {
 
 export type Product = {
   id: string;
+  slug?: string;
   name: string;
   description?: string;
   sku?: string;
@@ -66,6 +67,7 @@ export type SalesOrder = {
   discount_amount: number;
   total_amount: number;
   payment_status: string;
+  payment_method?: 'online' | 'cod';
   status: string;
   fulfillment_status?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 };
@@ -100,6 +102,18 @@ export type OrderDetail = SalesOrder & {
 export type CustomerSession = {
   access_token: string;
   user: { id: string; first_name: string; last_name: string; email: string; role: string; customer_id?: string };
+};
+
+export type Promotion = {
+  id: string;
+  code?: string;
+  name: string;
+  description?: string;
+  discount_type: 'percentage' | 'flat';
+  discount_value: number;
+  min_order_amount?: number;
+  max_discount_amount?: number;
+  end_date: string;
 };
 
 export type CategoryGroup = {
@@ -147,6 +161,12 @@ const DRISTA_API_BASE_URL = (
 ).replace(/\/+$/, '');
 const DRISTA_API_KEY = process.env.DRISTA_API_KEY || process.env.NEXT_PUBLIC_DRISTA_API_KEY || '';
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || '';
+
+/** Product detail URL — prefers the SEO-friendly slug, falling back to the
+ * raw id for older products that predate slug backfill. */
+export function productUrl(product: Pick<Product, 'id' | 'slug'>): string {
+  return `/products/${product.slug || product.id}`;
+}
 
 /** Transforms internal s3:// URLs into public HTTPS URLs — a safety net if the
  * backend fails to provide presigned URLs. */
@@ -198,12 +218,29 @@ function withResolvedImages(product: Product): Product {
   };
 }
 
-/** All active products in the catalog. Returns [] (never throws) if the
- * tenant isn't configured yet or the request fails — callers should pair
- * this with a sample-data fallback while onboarding is in progress. */
-export async function getProducts(): Promise<Product[]> {
+export type ProductFilters = {
+  q?: string;
+  category_id?: string;
+  min_price?: string;
+  max_price?: string;
+  color?: string;
+};
+
+/** All active products in the catalog, optionally filtered. Returns [] (never
+ * throws) if the tenant isn't configured yet or the request fails — callers
+ * should pair this with a sample-data fallback while onboarding is in
+ * progress. Omitting page/limit intentionally keeps this endpoint
+ * unpaginated — the catalog page renders the full filtered result set. */
+export async function getProducts(filters: ProductFilters = {}): Promise<Product[]> {
   try {
-    const payload = await dristaFetch('/v1/ecommerce/products');
+    const qs = new URLSearchParams();
+    if (filters.q) qs.set('q', filters.q);
+    if (filters.category_id) qs.set('category_id', filters.category_id);
+    if (filters.min_price) qs.set('min_price', filters.min_price);
+    if (filters.max_price) qs.set('max_price', filters.max_price);
+    if (filters.color) qs.set('color', filters.color);
+    const query = qs.toString();
+    const payload = await dristaFetch(`/v1/ecommerce/products${query ? `?${query}` : ''}`);
     const items = (payload?.data || []) as Product[];
     return items.filter((i) => i.is_active !== false).map(withResolvedImages);
   } catch (error) {
@@ -220,6 +257,16 @@ export async function getProduct(id: string): Promise<Product | null> {
   } catch (error) {
     console.error('[dristaService] getProduct error:', error);
     return null;
+  }
+}
+
+export async function getActivePromotions(): Promise<Promotion[]> {
+  try {
+    const payload = await dristaFetch('/v1/ecommerce/promotions/active');
+    return (payload?.data || []) as Promotion[];
+  } catch (error) {
+    console.error('[dristaService] getActivePromotions error:', error);
+    return [];
   }
 }
 
@@ -370,7 +417,7 @@ export async function validateCoupon(cartId: string, code: string, token?: strin
 
 export async function checkout(
   cartId: string,
-  data: { shipping_address: Record<string, unknown>; coupon_code?: string; shipping_option_id?: string; gstin?: string },
+  data: { shipping_address: Record<string, unknown>; coupon_code?: string; shipping_option_id?: string; gstin?: string; payment_method?: 'online' | 'cod' },
   token: string
 ): Promise<SalesOrder> {
   const payload = await dristaAction('/v1/ecommerce/checkout', {
@@ -416,6 +463,44 @@ export async function getMyOrderDetails(orderId: string, token: string): Promise
     if (item.variant?.image_url) item.variant.image_url = resolveImageUrl(item.variant.image_url);
   }
   return order;
+}
+
+export type ReturnRequest = {
+  id: string;
+  sales_order_id: string;
+  sales_order_item_id: string;
+  request_type: 'return' | 'exchange';
+  reason: string;
+  reason_notes?: string;
+  quantity: number;
+  exchange_variant_id?: string;
+  status: 'requested' | 'approved' | 'rejected' | 'pickup_scheduled' | 'received' | 'refunded' | 'exchanged' | 'cancelled';
+  refund_amount?: number;
+  admin_notes?: string;
+  images: string[];
+  created_at?: string;
+};
+
+export async function createReturnRequest(data: {
+  sales_order_id: string;
+  sales_order_item_id: string;
+  request_type: 'return' | 'exchange';
+  reason: string;
+  reason_notes?: string;
+  quantity: number;
+  exchange_variant_id?: string;
+}, token: string): Promise<ReturnRequest> {
+  const payload = await dristaAction('/v1/ecommerce/returns', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    token,
+  });
+  return payload.data as ReturnRequest;
+}
+
+export async function getMyReturns(token: string): Promise<ReturnRequest[]> {
+  const payload = await dristaAction('/v1/ecommerce/returns/mine', { token });
+  return (payload.data || []) as ReturnRequest[];
 }
 
 export type WishlistEntry = {

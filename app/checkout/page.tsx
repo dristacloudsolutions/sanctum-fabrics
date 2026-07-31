@@ -92,6 +92,7 @@ function CheckoutForm() {
   const [step, setStep] = useState<'details' | 'payment'>('details');
   const [address, setAddress] = useState({ line1: '', line2: '', city: '', state: '', pincode: '' });
   const [gstin, setGstin] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod'>('online');
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scriptReady, setScriptReady] = useState(false);
@@ -160,11 +161,20 @@ function CheckoutForm() {
           coupon_code: couponFromCart || undefined,
           shipping_option_id: selectedOptionId || undefined,
           gstin: gstin.trim() || undefined,
+          payment_method: paymentMethod,
         }),
       });
       const checkoutPayload = await checkoutRes.json();
       if (!checkoutRes.ok) throw new Error(checkoutPayload?.error || 'Failed to place order');
       const order = checkoutPayload.order;
+
+      // Cash on Delivery has no online payment step — the order is already
+      // fully placed (confirmed + billed) the moment checkout succeeds.
+      if (paymentMethod === 'cod') {
+        await refresh();
+        router.push(`/order-success?orderId=${order.id}`);
+        return;
+      }
 
       const initiateRes = await fetch('/api/payment/initiate', {
         method: 'POST',
@@ -172,7 +182,17 @@ function CheckoutForm() {
         body: JSON.stringify({ orderId: order.id }),
       });
       const initiatePayload = await initiateRes.json();
-      if (!initiateRes.ok) throw new Error(initiatePayload?.error || 'Failed to start payment');
+      if (!initiateRes.ok) {
+        // The store hasn't got an online gateway switched on — Cash on Delivery
+        // is still available, so switch the form to it instead of a dead end.
+        // (This particular order stays as an unpaid 'online' order — placing
+        // again below creates a fresh order under the COD method.)
+        if (/no active payment gateway/i.test(initiatePayload?.error || '')) {
+          setPaymentMethod('cod');
+          throw new Error('Online payment isn\'t available for this store right now. We\'ve switched you to Cash on Delivery — please place your order again.');
+        }
+        throw new Error(initiatePayload?.error || 'Failed to start payment');
+      }
       const payment = initiatePayload.payment;
 
       if (!scriptReady || !window.Razorpay) throw new Error('Payment gateway is still loading — please try again in a moment.');
@@ -314,6 +334,34 @@ function CheckoutForm() {
               {gstin && <p className="mt-2 text-[color:var(--ink)]/70">GSTIN: {gstin}</p>}
             </div>
 
+            <div className="rounded-2xl border border-[color:var(--border)] bg-white p-5">
+              <h3 className="mb-3 text-sm font-semibold text-[color:var(--ink)]">Payment Method</h3>
+              <div className="space-y-2">
+                {([
+                  { value: 'online', label: 'Pay Online', sub: 'UPI, Cards & Net Banking' },
+                  { value: 'cod', label: 'Cash on Delivery', sub: 'Pay when your order arrives' },
+                ] as const).map((opt) => (
+                  <label
+                    key={opt.value}
+                    className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-4 py-2.5 text-sm transition-colors ${
+                      paymentMethod === opt.value ? 'border-[color:var(--accent)] bg-[color:var(--accent)]/5' : 'border-[color:var(--border)]'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="payment_method"
+                      checked={paymentMethod === opt.value}
+                      onChange={() => setPaymentMethod(opt.value)}
+                    />
+                    <span>
+                      <span className="font-medium text-[color:var(--ink)]">{opt.label}</span>
+                      <span className="ml-2 text-[color:var(--ink)]/50">{opt.sub}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             {error && <p className="text-sm text-red-500">{error}</p>}
 
             <button
@@ -321,7 +369,7 @@ function CheckoutForm() {
               disabled={placing}
               className="w-full rounded-full bg-[color:var(--primary)] px-6 py-3 text-sm font-semibold text-white hover:-translate-y-0.5 transition-transform disabled:opacity-60"
             >
-              {placing ? 'Processing…' : 'Place Order & Pay'}
+              {placing ? 'Processing…' : paymentMethod === 'cod' ? 'Place Order (Cash on Delivery)' : 'Place Order & Pay'}
             </button>
           </div>
         )}

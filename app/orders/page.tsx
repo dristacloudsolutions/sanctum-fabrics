@@ -20,7 +20,7 @@ const FULFILLMENT_LABEL: Record<string, { label: string; cls: string }> = {
 };
 
 export default function OrdersPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const [orders, setOrders] = useState<SalesOrder[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,7 +54,15 @@ export default function OrdersPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-16">
-      <h1 className="font-serif text-3xl text-[color:var(--ink)]">My Orders</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="font-serif text-3xl text-[color:var(--ink)]">My Orders</h1>
+        <button
+          onClick={() => logout()}
+          className="text-sm font-medium text-[color:var(--ink)]/60 underline-offset-2 hover:text-[color:var(--accent)] hover:underline"
+        >
+          Log out
+        </button>
+      </div>
 
       {error && <p className="mt-6 text-sm text-red-500">{error}</p>}
 

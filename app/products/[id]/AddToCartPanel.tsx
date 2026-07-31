@@ -1,13 +1,19 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, Check, Heart } from 'lucide-react';
 import { Product } from '@/lib/dristaService';
 import { useCart } from '@/app/contexts/CartContext';
 import { useWishlist } from '@/app/contexts/WishlistContext';
 
-export default function AddToCartPanel({ product }: { product: Product }) {
+export default function AddToCartPanel({
+  product,
+  onVariantImageChange,
+}: {
+  product: Product;
+  onVariantImageChange?: (url: string | undefined) => void;
+}) {
   const { addItem } = useCart();
   const { isWishlisted, toggle: toggleWishlist } = useWishlist();
   const router = useRouter();
@@ -45,6 +51,11 @@ export default function AddToCartPanel({ product }: { product: Product }) {
     if (attributeKeys.some((k) => !selected[k])) return null;
     return variants.find((v) => attributeKeys.every((k) => String(v.attributes?.[k]) === selected[k])) || null;
   }, [variants, attributeKeys, selected]);
+
+  useEffect(() => {
+    onVariantImageChange?.(matchedVariant?.image_url);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchedVariant?.image_url]);
 
   const needsSelection = variants.length > 0 && !matchedVariant;
   const price = matchedVariant?.selling_price ?? product.selling_price ?? product.base_price;

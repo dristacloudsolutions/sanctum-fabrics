@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { checkout } from '@/lib/dristaService';
-import { getToken, getCartId } from '@/lib/session';
+import { getToken } from '@/lib/session';
+import { resolveCart } from '@/lib/cart-helpers';
 
 export async function POST(req: NextRequest) {
   try {
     const token = await getToken();
     if (!token) return NextResponse.json({ error: 'Please sign in to check out' }, { status: 401 });
 
-    const cartId = await getCartId();
-    if (!cartId) return NextResponse.json({ error: 'Your cart is empty' }, { status: 400 });
+    // resolveCart self-heals a missing/stale sanctum_cart_id cookie (e.g. left
+    // over from before a tenant/backend switch, or a cart that's since expired)
+    // by creating a fresh cart instead of misreporting "empty" for what's
+    // actually just a broken cart reference.
+    const { cartId, cart } = await resolveCart(token);
+    if (!cart.items || cart.items.length === 0) {
+      return NextResponse.json({ error: 'Your cart is empty' }, { status: 400 });
+    }
 
     const body = await req.json();
     const order = await checkout(cartId, body, token);

@@ -21,7 +21,7 @@ export const config = {
     },
 
     social: {
-      instagram: 'https://instagram.com/sanctumfabrics', // TODO: confirm handle
+      instagram: 'https://instagram.com/sanctum_in', // TODO: confirm handle
       facebook: '',
     },
   },

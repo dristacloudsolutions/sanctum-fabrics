@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Menu, X, ShoppingBag, User, Heart } from 'lucide-react';
+import { Menu, X, ShoppingBag, User, Heart, Search, LogOut } from 'lucide-react';
 import config from '@/app/config/config';
 import { useCart } from '@/app/contexts/CartContext';
 import { useAuth } from '@/app/contexts/AuthContext';
@@ -17,7 +17,7 @@ const NAV = [
 export default function Header() {
   const [open, setOpen] = useState(false);
   const { itemCount } = useCart();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { itemIds: wishlistIds } = useWishlist();
 
   return (
@@ -39,6 +39,18 @@ export default function Header() {
           ))}
         </nav>
 
+        <form action="/products" method="get" className="hidden max-w-xs flex-1 items-center md:mx-6 md:flex">
+          <div className="relative w-full">
+            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--ink)]/40" />
+            <input
+              type="text"
+              name="q"
+              placeholder="Search sarees, fabrics…"
+              className="w-full rounded-full border border-[color:var(--border)] bg-white py-2 pl-9 pr-3 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--ink)]/40 focus:border-[color:var(--accent)] focus:outline-none"
+            />
+          </div>
+        </form>
+
         <div className="flex items-center gap-4">
           {user && (
             <>
@@ -53,6 +65,13 @@ export default function Header() {
               <Link href="/orders" aria-label="My Orders" className="text-[color:var(--ink)] hover:text-[color:var(--accent)]">
                 <User size={22} />
               </Link>
+              <button
+                onClick={() => logout()}
+                aria-label="Log out"
+                className="text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              >
+                <LogOut size={22} />
+              </button>
             </>
           )}
 
@@ -74,6 +93,18 @@ export default function Header() {
           </button>
         </div>
       </div>
+
+      <form action="/products" method="get" className="border-t border-[color:var(--border)] px-5 py-3 md:hidden">
+        <div className="relative w-full">
+          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--ink)]/40" />
+          <input
+            type="text"
+            name="q"
+            placeholder="Search sarees, fabrics…"
+            className="w-full rounded-full border border-[color:var(--border)] bg-white py-2 pl-9 pr-3 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--ink)]/40 focus:border-[color:var(--accent)] focus:outline-none"
+          />
+        </div>
+      </form>
 
       {open && (
         <nav className="flex flex-col gap-1 border-t border-[color:var(--border)] px-5 py-3 md:hidden">

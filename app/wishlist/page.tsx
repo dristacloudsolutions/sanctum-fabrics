@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Heart, X } from 'lucide-react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useWishlist } from '@/app/contexts/WishlistContext';
-import { WishlistEntry } from '@/lib/dristaService';
+import { WishlistEntry, productUrl } from '@/lib/dristaService';
 
 export default function WishlistPage() {
   const { user, loading: authLoading } = useAuth();
@@ -80,7 +80,7 @@ export default function WishlistPage() {
                 >
                   <X size={14} />
                 </button>
-                <Link href={`/products/${product.id}`} className="block">
+                <Link href={productUrl(product)} className="block">
                   <div className="relative aspect-[4/5] w-full overflow-hidden bg-[color:var(--cream)]">
                     {image?.url ? (
                       <Image src={image.url} alt={product.name} fill unoptimized className="object-cover transition-transform duration-500 group-hover:scale-105" />

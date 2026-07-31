@@ -6,7 +6,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/app/contexts/AuthContext';
-import { OrderDetail } from '@/lib/dristaService';
+import { OrderDetail, OrderLineItem, ReturnRequest } from '@/lib/dristaService';
+import ReturnRequestModal from '@/app/components/ReturnRequestModal';
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   paid: { label: 'Paid', cls: 'bg-emerald-50 text-emerald-700' },
@@ -21,12 +22,32 @@ const FULFILLMENT_LABEL: Record<string, { label: string; cls: string }> = {
   cancelled: { label: 'Cancelled', cls: 'bg-red-50 text-red-600' },
 };
 
+const RETURN_STATUS_LABEL: Record<string, { label: string; cls: string }> = {
+  requested: { label: 'Requested', cls: 'bg-amber-50 text-amber-700' },
+  approved: { label: 'Approved', cls: 'bg-blue-50 text-blue-700' },
+  rejected: { label: 'Rejected', cls: 'bg-red-50 text-red-600' },
+  pickup_scheduled: { label: 'Pickup Scheduled', cls: 'bg-blue-50 text-blue-700' },
+  received: { label: 'Item Received', cls: 'bg-blue-50 text-blue-700' },
+  refunded: { label: 'Refunded', cls: 'bg-emerald-50 text-emerald-700' },
+  exchanged: { label: 'Exchanged', cls: 'bg-emerald-50 text-emerald-700' },
+  cancelled: { label: 'Cancelled', cls: 'bg-zinc-100 text-zinc-500' },
+};
+
 export default function OrderDetailPage() {
   const { user, loading: authLoading } = useAuth();
   const params = useParams();
   const orderId = params.id as string;
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [returns, setReturns] = useState<ReturnRequest[]>([]);
+  const [returnItem, setReturnItem] = useState<OrderLineItem | null>(null);
+
+  const loadReturns = () => {
+    fetch('/api/returns')
+      .then((res) => res.json())
+      .then((payload) => setReturns(payload.returns || []))
+      .catch(() => {});
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -37,6 +58,7 @@ export default function OrderDetailPage() {
         setOrder(payload.order);
       })
       .catch((err) => setError(err.message || 'Order not found'));
+    loadReturns();
   }, [user, orderId]);
 
   if (authLoading) return null;
@@ -90,26 +112,55 @@ export default function OrderDetailPage() {
       </div>
 
       <div className="mt-8 divide-y divide-[color:var(--border)] border-y border-[color:var(--border)]">
-        {order.items.map((item) => (
-          <div key={item.id} className="flex items-center gap-4 py-4">
-            <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-lg bg-[color:var(--cream)]">
-              {item.variant?.image_url && (
-                <Image src={item.variant.image_url} alt={item.item?.name || ''} fill unoptimized className="object-cover" />
-              )}
+        {order.items.map((item) => {
+          const existingReturn = returns.find((r) => r.sales_order_item_id === item.id);
+          return (
+            <div key={item.id} className="flex items-center gap-4 py-4">
+              <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-lg bg-[color:var(--cream)]">
+                {item.variant?.image_url && (
+                  <Image src={item.variant.image_url} alt={item.item?.name || ''} fill unoptimized className="object-cover" />
+                )}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-[color:var(--ink)]">{item.item?.name}</p>
+                {item.variant?.attributes && (
+                  <p className="mt-0.5 text-xs text-[color:var(--ink)]/50">
+                    {Object.entries(item.variant.attributes).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                  </p>
+                )}
+                <p className="mt-1 text-xs text-[color:var(--ink)]/50">Qty {item.quantity} × ₹{Number(item.rate).toLocaleString('en-IN')}</p>
+                {order.fulfillment_status === 'delivered' && (
+                  existingReturn ? (
+                    <span className={`mt-2 inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${RETURN_STATUS_LABEL[existingReturn.status]?.cls || 'bg-zinc-100 text-zinc-500'}`}>
+                      {existingReturn.request_type === 'exchange' ? 'Exchange' : 'Return'}: {RETURN_STATUS_LABEL[existingReturn.status]?.label || existingReturn.status}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => setReturnItem(item)}
+                      className="mt-2 text-xs font-semibold text-[color:var(--primary)] underline underline-offset-2 hover:text-[color:var(--accent)]"
+                    >
+                      Request Return / Exchange
+                    </button>
+                  )
+                )}
+              </div>
+              <p className="text-sm font-semibold text-[color:var(--ink)]">₹{Number(item.amount).toLocaleString('en-IN')}</p>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-[color:var(--ink)]">{item.item?.name}</p>
-              {item.variant?.attributes && (
-                <p className="mt-0.5 text-xs text-[color:var(--ink)]/50">
-                  {Object.entries(item.variant.attributes).map(([k, v]) => `${k}: ${v}`).join(' · ')}
-                </p>
-              )}
-              <p className="mt-1 text-xs text-[color:var(--ink)]/50">Qty {item.quantity} × ₹{Number(item.rate).toLocaleString('en-IN')}</p>
-            </div>
-            <p className="text-sm font-semibold text-[color:var(--ink)]">₹{Number(item.amount).toLocaleString('en-IN')}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
+
+      {returnItem && (
+        <ReturnRequestModal
+          orderId={order.id}
+          item={returnItem}
+          onClose={() => setReturnItem(null)}
+          onSuccess={() => {
+            setReturnItem(null);
+            loadReturns();
+          }}
+        />
+      )}
 
       <div className="mt-6 flex flex-col items-end gap-1.5 text-sm">
         <div className="flex justify-between w-full max-w-xs text-[color:var(--ink)]/70">

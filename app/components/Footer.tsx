@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Mail, Phone } from 'lucide-react';
 import config from '@/app/config/config';
+import { TenantProfile } from '@/lib/dristaService';
 
 // lucide-react dropped brand icons (Instagram etc.) — inline SVG instead.
 function InstagramIcon({ size = 14 }: { size?: number }) {
@@ -13,14 +14,18 @@ function InstagramIcon({ size = 14 }: { size?: number }) {
   );
 }
 
-export default function Footer() {
+export default function Footer({ tenantProfile }: { tenantProfile?: TenantProfile | null }) {
   const { business } = config;
+  const name = tenantProfile?.name || business.name;
+  const email = tenantProfile?.email || business.contact.email;
+  const phone = tenantProfile?.phone || business.contact.phone;
+  const instagram = tenantProfile?.settings?.social?.instagram || business.social.instagram;
 
   return (
     <footer className="mt-24 border-t border-[color:var(--border)] bg-[color:var(--primary)] text-[color:var(--cream)]">
       <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 sm:grid-cols-3">
         <div>
-          <p className="font-serif text-lg">{business.name}</p>
+          <p className="font-serif text-lg">{name}</p>
           <p className="mt-2 max-w-xs text-sm text-[color:var(--cream)]/70">{business.tagline}</p>
         </div>
 
@@ -28,11 +33,11 @@ export default function Footer() {
           <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[color:var(--cream)]/50">
             Get in touch
           </p>
-          <a href={`mailto:${business.contact.email}`} className="flex items-center gap-2 py-1 text-[color:var(--cream)]/80 hover:text-white">
-            <Mail size={14} /> {business.contact.email}
+          <a href={`mailto:${email}`} className="flex items-center gap-2 py-1 text-[color:var(--cream)]/80 hover:text-white">
+            <Mail size={14} /> {email}
           </a>
-          <a href={`tel:${business.contact.phone}`} className="flex items-center gap-2 py-1 text-[color:var(--cream)]/80 hover:text-white">
-            <Phone size={14} /> {business.contact.phone}
+          <a href={`tel:${phone}`} className="flex items-center gap-2 py-1 text-[color:var(--cream)]/80 hover:text-white">
+            <Phone size={14} /> {phone}
           </a>
         </div>
 
@@ -40,9 +45,9 @@ export default function Footer() {
           <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[color:var(--cream)]/50">
             Follow along
           </p>
-          {business.social.instagram && (
+          {instagram && (
             <a
-              href={business.social.instagram}
+              href={instagram}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 py-1 text-[color:var(--cream)]/80 hover:text-white"
@@ -54,9 +59,21 @@ export default function Footer() {
             Browse the catalog →
           </Link>
         </div>
+
+        <div className="text-sm sm:col-span-3">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[color:var(--cream)]/50">
+            Policies
+          </p>
+          <div className="flex flex-wrap gap-x-6 gap-y-1">
+            <Link href="/terms" className="text-[color:var(--cream)]/80 hover:text-white">Terms & Conditions</Link>
+            <Link href="/privacy" className="text-[color:var(--cream)]/80 hover:text-white">Privacy Policy</Link>
+            <Link href="/returns" className="text-[color:var(--cream)]/80 hover:text-white">Returns & Exchanges</Link>
+            <Link href="/shipping" className="text-[color:var(--cream)]/80 hover:text-white">Shipping Policy</Link>
+          </div>
+        </div>
       </div>
       <div className="border-t border-white/10 px-5 py-4 text-center text-xs text-[color:var(--cream)]/50">
-        © {new Date().getFullYear()} {business.name}. All rights reserved.
+        © {new Date().getFullYear()} {name}. All rights reserved.
       </div>
     </footer>
   );
