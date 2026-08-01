@@ -23,6 +23,8 @@ const playfair = Playfair_Display({
   subsets: ["latin"],
 });
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: config.seo.title,
   description: config.seo.description,

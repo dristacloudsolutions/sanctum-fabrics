@@ -14,6 +14,8 @@ const TRUST_BADGES = [
   { icon: BadgeCheck, label: 'Authentic Handloom', sub: 'Sourced from artisan clusters' },
 ];
 
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   const [liveProducts, categories] = await Promise.all([getProducts(), getCategoryHierarchy()]);
   const products = liveProducts.length > 0 ? liveProducts : sampleProducts;
