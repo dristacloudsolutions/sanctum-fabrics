@@ -159,8 +159,14 @@ const DRISTA_API_BASE_URL = (
   process.env.NEXT_PUBLIC_DRISTA_API_BASE_URL ||
   'https://api.drista.in'
 ).replace(/\/+$/, '');
-const DRISTA_API_KEY = process.env.DRISTA_API_KEY || process.env.NEXT_PUBLIC_DRISTA_API_KEY || '';
-const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || '';
+// TEMPORARY: hardcoded fallbacks while Amplify env vars aren't reaching the
+// SSR compute in production. Env var still wins if present — remove these
+// fallbacks once the Amplify env var issue is resolved.
+const DRISTA_API_KEY =
+  process.env.DRISTA_API_KEY ||
+  process.env.NEXT_PUBLIC_DRISTA_API_KEY ||
+  'dr_live_pk_465f2737_6e54f434b85b9933d015626baf04413d44338bdb';
+const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'e467e2f9-334e-4a90-8d12-d85ac7554fa3';
 
 /** Product detail URL — prefers the SEO-friendly slug, falling back to the
  * raw id for older products that predate slug backfill. */
