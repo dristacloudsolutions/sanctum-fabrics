@@ -174,6 +174,40 @@ export function productUrl(product: Pick<Product, 'id' | 'slug'>): string {
   return `/products/${product.slug || product.id}`;
 }
 
+export type AttributeFacet = { key: string; label: string; values: string[] };
+
+/** `color_family` → `Color Family`. */
+function humanizeAttributeKey(key: string): string {
+  return key
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Derives the "Color", "Size", "Material", etc. filter groups straight from
+ * whatever keys actually appear in this catalog's variant attributes —
+ * nothing hardcoded, so a group only shows up if real products have it, and
+ * disappears on its own once they don't. */
+export function buildAttributeFacets(products: Product[]): AttributeFacet[] {
+  const valuesByKey = new Map<string, Set<string>>();
+  for (const product of products) {
+    for (const variant of product.variants || []) {
+      for (const [key, value] of Object.entries(variant.attributes || {})) {
+        if (value === undefined || value === null || value === '') continue;
+        if (!valuesByKey.has(key)) valuesByKey.set(key, new Set());
+        valuesByKey.get(key)!.add(String(value));
+      }
+    }
+  }
+  return Array.from(valuesByKey.entries())
+    .map(([key, values]) => ({
+      key,
+      label: humanizeAttributeKey(key),
+      values: Array.from(values).sort((a, b) => a.localeCompare(b)),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 /** Transforms internal s3:// URLs into public HTTPS URLs — a safety net if the
  * backend fails to provide presigned URLs. */
 export function resolveImageUrl(url: string | undefined): string | undefined {

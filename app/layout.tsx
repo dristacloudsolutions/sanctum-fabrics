@@ -11,7 +11,7 @@ import Footer from "./components/Footer";
 import FloatingActions from "./components/FloatingActions";
 import PromoBanner from "./components/PromoBanner";
 import config from "./config/config";
-import { getTenantProfile, getActivePromotions, getMe, getCart, Cart, CustomerProfile } from "@/lib/dristaService";
+import { getTenantProfile, getActivePromotions, getCategoryHierarchy, getMe, getCart, Cart, CustomerProfile } from "@/lib/dristaService";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -41,7 +41,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [tenantProfile, promotions] = await Promise.all([getTenantProfile(), getActivePromotions()]);
+  const [tenantProfile, promotions, categories] = await Promise.all([getTenantProfile(), getActivePromotions(), getCategoryHierarchy()]);
 
   // Read-only here — a Server Component render can't set cookies. If no cart_id
   // cookie exists yet, CartProvider lazily creates one client-side via
@@ -63,7 +63,7 @@ export default async function RootLayout({
             <CartProvider initialCart={initialCart}>
               <WishlistProvider>
                 <PromoBanner promotions={promotions} />
-                <Header />
+                <Header categories={categories} />
                 <main className="flex-1">{children}</main>
                 <Footer tenantProfile={tenantProfile} />
                 <FloatingActions />

@@ -27,9 +27,9 @@ export default function ProductCard({ product }: { product: Product }) {
   return (
     <Link
       href={productUrl(product)}
-      className="group block overflow-hidden rounded-2xl border border-[color:var(--border)] bg-white transition-shadow hover:shadow-lg"
+      className="group block overflow-hidden rounded-xl border border-[color:var(--border)] bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
     >
-      <div className="relative aspect-[4/5] w-full overflow-hidden bg-[color:var(--cream)]">
+      <div className="relative aspect-[3/4] w-full overflow-hidden bg-[color:var(--cream)]">
         {image?.url ? (
           <Image
             src={image.url}
@@ -45,7 +45,7 @@ export default function ProductCard({ product }: { product: Product }) {
         )}
 
         {hasDiscount && (
-          <span className="absolute left-2 top-2 rounded-full bg-[color:var(--accent)] px-2.5 py-1 text-[10px] font-bold text-white">
+          <span className="absolute left-0 top-3 rounded-r-full bg-[color:var(--accent)] py-1 pl-2.5 pr-3 text-[11px] font-bold tracking-wide text-white shadow-sm">
             {discountPct}% OFF
           </span>
         )}
@@ -61,13 +61,16 @@ export default function ProductCard({ product }: { product: Product }) {
           </button>
         )}
       </div>
-      <div className="p-4">
-        <h3 className="font-serif text-base text-[color:var(--ink)] leading-snug">{product.name}</h3>
+      <div className="p-3">
+        <h3 className="line-clamp-2 font-serif text-sm leading-snug text-[color:var(--ink)]">{product.name}</h3>
         {price !== undefined && (
-          <div className="mt-1 flex items-center gap-2">
-            <p className="text-sm font-semibold text-[color:var(--accent)]">₹{price.toLocaleString('en-IN')}</p>
+          <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <p className="text-base font-bold text-[color:var(--ink)]">₹{price.toLocaleString('en-IN')}</p>
             {hasDiscount && (
-              <p className="text-xs text-[color:var(--ink)]/40 line-through">₹{mrp!.toLocaleString('en-IN')}</p>
+              <>
+                <p className="text-xs text-[color:var(--ink)]/40 line-through">₹{mrp!.toLocaleString('en-IN')}</p>
+                <p className="text-xs font-semibold text-[color:var(--accent)]">{discountPct}% off</p>
+              </>
             )}
           </div>
         )}
