@@ -209,7 +209,11 @@ export function buildAttributeFacets(products: Product[]): AttributeFacet[] {
 }
 
 /** Transforms internal s3:// URLs into public HTTPS URLs — a safety net if the
- * backend fails to provide presigned URLs. */
+ * backend fails to provide presigned URLs. Also guards against a scheme-less
+ * CDN/bucket hostname (e.g. "d3w26h1x5xxse5.cloudfront.net/key" with no
+ * "https://") slipping through from a misconfigured CDN_DOMAIN env var on
+ * the backend — without this, `next/image` and <img> silently fail to load
+ * it since it looks like a relative path, not an absolute URL. */
 export function resolveImageUrl(url: string | undefined): string | undefined {
   if (!url) return url;
   if (url.startsWith('s3://')) {
@@ -220,6 +224,10 @@ export function resolveImageUrl(url: string | undefined): string | undefined {
       const key = withoutProtocol.substring(firstSlash + 1);
       return `https://${bucket}.s3.amazonaws.com/${key}`;
     }
+    return url;
+  }
+  if (!/^https?:\/\//i.test(url) && !url.startsWith('/')) {
+    return `https://${url}`;
   }
   return url;
 }
