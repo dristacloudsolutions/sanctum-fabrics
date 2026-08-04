@@ -74,7 +74,7 @@ export default function ProductGallery({
 
   if (!activeUrl && images.length === 0) {
     return (
-      <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-[color:var(--cream)]">
+      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl bg-[color:var(--cream)]">
         <div className="flex h-full items-center justify-center text-sm text-[color:var(--ink)]/40">
           No image yet
         </div>
@@ -84,7 +84,20 @@ export default function ProductGallery({
 
   return (
     <div>
-      <div className="flex gap-3">
+      {/* Mobile: swipeable carousel — a fixed-width vertical thumbnail rail
+          eats too much horizontal space on narrow screens, and there's no
+          hover for the magnifier lens anyway, so swipe is the native pattern here. */}
+      <div className="md:hidden">
+        {overrideImageUrl ? (
+          <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl bg-[color:var(--cream)]">
+            <Image src={overrideImageUrl} alt={productName} fill unoptimized className="object-cover" />
+          </div>
+        ) : (
+          <MobileCarousel images={images} productName={productName} activeIndex={activeIndex} onIndexChange={setActiveIndex} onOpenLightbox={() => setLightboxOpen(true)} />
+        )}
+      </div>
+
+      <div className="hidden gap-3 md:flex">
         {images.length > 1 && (
           <div className="flex max-h-[560px] w-16 shrink-0 flex-col gap-2 overflow-y-auto">
             {images.map((img, i) => {
@@ -221,6 +234,81 @@ export default function ProductGallery({
           )}
         </AnimatePresence>,
         document.body
+      )}
+    </div>
+  );
+}
+
+function MobileCarousel({
+  images,
+  productName,
+  activeIndex,
+  onIndexChange,
+  onOpenLightbox,
+}: {
+  images: ProductImage[];
+  productName: string;
+  activeIndex: number;
+  onIndexChange: (i: number) => void;
+  onOpenLightbox: () => void;
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const isProgrammaticScroll = useRef(false);
+
+  // Keeps the dot indicator in sync with whatever slide the user actually
+  // swiped to — driven by scroll position rather than a swipe-gesture
+  // library, so it works with native momentum scrolling and scroll-snap.
+  const handleScroll = () => {
+    if (isProgrammaticScroll.current) return;
+    const el = scrollerRef.current;
+    if (!el) return;
+    const index = Math.round(el.scrollLeft / el.clientWidth);
+    if (index !== activeIndex) onIndexChange(index);
+  };
+
+  const scrollToIndex = (i: number) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    isProgrammaticScroll.current = true;
+    el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' });
+    onIndexChange(i);
+    window.setTimeout(() => { isProgrammaticScroll.current = false; }, 400);
+  };
+
+  return (
+    <div>
+      <div
+        ref={scrollerRef}
+        onScroll={handleScroll}
+        className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {images.map((img, i) => (
+          <button
+            key={img.url || i}
+            type="button"
+            onClick={onOpenLightbox}
+            className="relative aspect-[4/5] w-full shrink-0 snap-center overflow-hidden bg-[color:var(--cream)]"
+            aria-label={`View image ${i + 1} of ${images.length}`}
+          >
+            {img.url && <Image src={img.url} alt={img.alt_text || productName} fill unoptimized className="object-cover" />}
+          </button>
+        ))}
+      </div>
+
+      {images.length > 1 && (
+        <div className="mt-3 flex justify-center gap-1.5">
+          {images.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => scrollToIndex(i)}
+              aria-label={`Go to image ${i + 1}`}
+              className={`h-1.5 rounded-full transition-all ${
+                i === activeIndex ? 'w-5 bg-[color:var(--accent)]' : 'w-1.5 bg-[color:var(--ink)]/20'
+              }`}
+            />
+          ))}
+        </div>
       )}
     </div>
   );

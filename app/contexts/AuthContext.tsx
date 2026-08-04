@@ -6,8 +6,8 @@ import { CustomerProfile } from '@/lib/dristaService';
 interface AuthContextType {
   user: CustomerProfile | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: { first_name: string; last_name: string; email: string; password: string; phone?: string }) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
+  register: (data: { first_name: string; last_name: string; phone: string; password: string; email?: string }) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -24,17 +24,21 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
   const [user, setUser] = useState<CustomerProfile | null>(initialUser);
   const [loading, setLoading] = useState(false);
 
-  const login = async (email: string, password: string) => {
+  // Accepts a phone number or an email address as the identifier — phone is
+  // the primary way customers sign up now, but an email still works for
+  // anyone who has one on their account.
+  const login = async (identifier: string, password: string) => {
     setLoading(true);
     try {
-      const payload = await postJson('/api/auth/login', { email, password });
+      const body = identifier.includes('@') ? { email: identifier, password } : { phone: identifier, password };
+      const payload = await postJson('/api/auth/login', body);
       setUser(payload.user);
     } finally {
       setLoading(false);
     }
   };
 
-  const register = async (data: { first_name: string; last_name: string; email: string; password: string; phone?: string }) => {
+  const register = async (data: { first_name: string; last_name: string; phone: string; password: string; email?: string }) => {
     setLoading(true);
     try {
       const payload = await postJson('/api/auth/register', data);

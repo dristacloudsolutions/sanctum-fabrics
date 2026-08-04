@@ -7,6 +7,7 @@ import type { Product } from '@/lib/dristaService';
 import { productUrl } from '@/lib/dristaService';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useWishlist } from '@/app/contexts/WishlistContext';
+import { formatINR } from '@/lib/format';
 
 export default function ProductCard({ product }: { product: Product }) {
   const { user } = useAuth();
@@ -65,10 +66,10 @@ export default function ProductCard({ product }: { product: Product }) {
         <h3 className="line-clamp-2 font-serif text-sm leading-snug text-[color:var(--ink)]">{product.name}</h3>
         {price !== undefined && (
           <div className="mt-1.5 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5">
-            <p className="text-base font-bold text-[color:var(--ink)]">₹{price.toLocaleString('en-IN')}</p>
+            <p className="text-base font-bold text-[color:var(--ink)]">₹{formatINR(price)}</p>
             {hasDiscount && (
               <>
-                <p className="text-xs text-[color:var(--ink)]/40 line-through">₹{mrp!.toLocaleString('en-IN')}</p>
+                <p className="text-xs text-[color:var(--ink)]/40 line-through">₹{formatINR(mrp!)}</p>
                 <p className="text-xs font-semibold text-[color:var(--accent)]">{discountPct}% off</p>
               </>
             )}

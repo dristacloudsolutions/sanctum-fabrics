@@ -5,6 +5,7 @@ import { ArrowLeft, MessageCircle } from 'lucide-react';
 import { getProduct } from '@/lib/dristaService';
 import { sampleProducts } from '@/lib/sampleProducts';
 import { buildWhatsAppLink, productOrderMessage } from '@/lib/whatsapp';
+import { formatINR } from '@/lib/format';
 import ProductDetailInteractive from './ProductDetailInteractive';
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -57,7 +58,7 @@ function SampleProductDetail({ product }: { product: NonNullable<ReturnType<type
           <p className="mt-4 leading-relaxed text-[color:var(--ink)]/70">{product.description}</p>
         )}
         {price !== undefined && (
-          <p className="mt-3 text-2xl font-semibold text-[color:var(--accent)]">₹{price.toLocaleString('en-IN')}</p>
+          <p className="mt-3 text-2xl font-semibold text-[color:var(--accent)]">₹{formatINR(price)}</p>
         )}
 
         <a

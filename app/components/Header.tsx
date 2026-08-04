@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
-import { Menu, X, ShoppingBag, User, Heart, LogOut, ChevronDown } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Menu, X, ShoppingBag, User, Heart, LogOut, ChevronDown, ShieldCheck } from 'lucide-react';
 import config from '@/app/config/config';
 import { useCart } from '@/app/contexts/CartContext';
 import { useAuth } from '@/app/contexts/AuthContext';
@@ -39,10 +40,12 @@ function WhatsAppIcon({ size = 14 }: { size?: number }) {
 export default function Header({ categories = [] }: { categories?: CategoryGroup[] }) {
   const [open, setOpen] = useState(false);
   const [collectionsOpen, setCollectionsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const { itemCount } = useCart();
   const { user, logout } = useAuth();
   const { itemIds: wishlistIds } = useWishlist();
   const { business } = config;
+  const pathname = usePathname();
 
   // First few real categories shown as flat nav links (matching the flat
   // Sarees/Churidars/Tops layout of the reference); the rest live in the
@@ -50,6 +53,24 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
   // differently named) categories.
   const flatCategories = categories.slice(0, 3);
   const dropdownCategories = categories.slice(3);
+
+  // Checkout gets a stripped-down header — no promo banner, nav, or "Shop Now"
+  // CTA to click away on — the only two things a shopper should be able to do
+  // here are complete the purchase or (via the logo) bail back to the store.
+  if (pathname?.startsWith('/checkout')) {
+    return (
+      <header className="sticky top-0 z-50 border-b border-[color:var(--border)] bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
+          <Link href="/" className="flex shrink-0 items-center">
+            <Image src="/logo.jpg" alt={business.name} width={1128} height={356} priority className="h-9 w-auto" />
+          </Link>
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-[color:var(--ink)]/50">
+            <ShieldCheck size={14} className="text-emerald-600" /> Secure Checkout
+          </span>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur">
@@ -80,9 +101,9 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
 
       {/* Main row */}
       <div className="border-b border-[color:var(--border)]">
-        <div className="mx-auto flex max-w-6xl items-center gap-6 px-5 py-2">
+        <div className="mx-auto flex max-w-6xl items-center gap-6 px-5 py-3.5">
           <Link href="/" className="flex shrink-0 items-center">
-            <Image src="/logo.jpg" alt={business.name} width={1128} height={356} priority className="h-9 w-auto" />
+            <Image src="/logo.jpg" alt={business.name} width={1128} height={356} priority className="h-11 w-auto" />
           </Link>
 
           <nav className="ml-auto hidden items-center gap-6 lg:flex">
@@ -129,22 +150,14 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
 
           <div className="ml-auto flex items-center gap-4 lg:ml-0">
             {user && (
-              <>
-                <Link href="/wishlist" aria-label="Wishlist" className="relative text-[color:var(--ink)] hover:text-[color:var(--accent)]">
-                  <Heart size={20} />
-                  {wishlistIds.size > 0 && (
-                    <span className="absolute -right-2 -top-2 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[color:var(--accent)] px-1 text-[10px] font-bold text-white">
-                      {wishlistIds.size}
-                    </span>
-                  )}
-                </Link>
-                <Link href="/orders" aria-label="My Orders" className="text-[color:var(--ink)] hover:text-[color:var(--accent)]">
-                  <User size={20} />
-                </Link>
-                <button onClick={() => logout()} aria-label="Log out" className="text-[color:var(--ink)] hover:text-[color:var(--accent)]">
-                  <LogOut size={20} />
-                </button>
-              </>
+              <Link href="/wishlist" aria-label="Wishlist" className="relative text-[color:var(--ink)] hover:text-[color:var(--accent)]">
+                <Heart size={20} />
+                {wishlistIds.size > 0 && (
+                  <span className="absolute -right-2 -top-2 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[color:var(--accent)] px-1 text-[10px] font-bold text-white">
+                    {wishlistIds.size}
+                  </span>
+                )}
+              </Link>
             )}
 
             <Link href="/cart" aria-label="Cart" className="relative text-[color:var(--ink)] hover:text-[color:var(--accent)]">
@@ -156,12 +169,50 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
               )}
             </Link>
 
-            <Link
-              href="/products"
-              className="hidden shrink-0 rounded-full bg-[color:var(--accent)] px-5 py-2 text-xs font-semibold uppercase tracking-widest text-white transition-transform hover:-translate-y-0.5 sm:inline-block"
-            >
-              Shop Now
-            </Link>
+            {!user && (
+              <Link
+                href="/products"
+                className="hidden shrink-0 rounded-full bg-[color:var(--accent)] px-5 py-2 text-xs font-semibold uppercase tracking-widest text-white transition-transform hover:-translate-y-0.5 sm:inline-block"
+              >
+                Shop Now
+              </Link>
+            )}
+
+            {user && (
+              <div className="relative">
+                <button
+                  onClick={() => setProfileOpen((v) => !v)}
+                  aria-label="Account"
+                  aria-expanded={profileOpen}
+                  className="text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+                >
+                  <User size={20} />
+                </button>
+                {profileOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)} />
+                    <div className="absolute right-0 top-full z-50 mt-3 w-52 rounded-xl border border-[color:var(--border)] bg-white p-2 shadow-xl">
+                      <p className="truncate px-3 py-2 text-xs text-[color:var(--ink)]/50">
+                        Signed in as <span className="font-semibold text-[color:var(--ink)]">{user.first_name}</span>
+                      </p>
+                      <Link
+                        href="/orders"
+                        onClick={() => setProfileOpen(false)}
+                        className="block rounded-lg px-3 py-2 text-sm text-[color:var(--ink)]/80 hover:bg-[color:var(--cream)] hover:text-[color:var(--accent)]"
+                      >
+                        My Orders
+                      </Link>
+                      <button
+                        onClick={() => { setProfileOpen(false); logout(); }}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50"
+                      >
+                        <LogOut size={14} /> Log out
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             <button aria-label="Toggle menu" className="text-[color:var(--ink)] lg:hidden" onClick={() => setOpen((v) => !v)}>
               {open ? <X size={22} /> : <Menu size={22} />}

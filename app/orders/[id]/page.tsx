@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { OrderDetail, OrderLineItem, ReturnRequest } from '@/lib/dristaService';
 import ReturnRequestModal from '@/app/components/ReturnRequestModal';
+import { formatINR } from '@/lib/format';
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   paid: { label: 'Paid', cls: 'bg-emerald-50 text-emerald-700' },
@@ -128,7 +129,7 @@ export default function OrderDetailPage() {
                     {Object.entries(item.variant.attributes).map(([k, v]) => `${k}: ${v}`).join(' · ')}
                   </p>
                 )}
-                <p className="mt-1 text-xs text-[color:var(--ink)]/50">Qty {item.quantity} × ₹{Number(item.rate).toLocaleString('en-IN')}</p>
+                <p className="mt-1 text-xs text-[color:var(--ink)]/50">Qty {item.quantity} × ₹{formatINR(item.rate)}</p>
                 {order.fulfillment_status === 'delivered' && (
                   existingReturn ? (
                     <span className={`mt-2 inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${RETURN_STATUS_LABEL[existingReturn.status]?.cls || 'bg-zinc-100 text-zinc-500'}`}>
@@ -144,7 +145,7 @@ export default function OrderDetailPage() {
                   )
                 )}
               </div>
-              <p className="text-sm font-semibold text-[color:var(--ink)]">₹{Number(item.amount).toLocaleString('en-IN')}</p>
+              <p className="text-sm font-semibold text-[color:var(--ink)]">₹{formatINR(item.amount)}</p>
             </div>
           );
         })}
@@ -165,17 +166,17 @@ export default function OrderDetailPage() {
       <div className="mt-6 flex flex-col items-end gap-1.5 text-sm">
         <div className="flex justify-between w-full max-w-xs text-[color:var(--ink)]/70">
           <span>Subtotal</span>
-          <span>₹{Number(order.subtotal).toLocaleString('en-IN')}</span>
+          <span>₹{formatINR(order.subtotal)}</span>
         </div>
         {Number(order.discount_amount) > 0 && (
           <div className="flex justify-between w-full max-w-xs text-emerald-600">
             <span>Discount</span>
-            <span>−₹{Number(order.discount_amount).toLocaleString('en-IN')}</span>
+            <span>−₹{formatINR(order.discount_amount)}</span>
           </div>
         )}
         <div className="flex justify-between w-full max-w-xs border-t border-[color:var(--border)] pt-2 text-base font-semibold text-[color:var(--ink)]">
           <span>Total</span>
-          <span>₹{Number(order.total_amount).toLocaleString('en-IN')}</span>
+          <span>₹{formatINR(order.total_amount)}</span>
         </div>
       </div>
 

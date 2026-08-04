@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { getProducts, getCategoryHierarchy, buildAttributeFacets, type Product } from '@/lib/dristaService';
 import { sampleProducts } from '@/lib/sampleProducts';
@@ -99,7 +100,7 @@ export default async function ProductsPage({
   const isAttrChecked = (key: string, value: string) => toValueList(paramsAsRecord[`attr_${key}`]).includes(value);
 
   return (
-    <div className="mx-auto max-w-7xl px-5 py-16">
+    <div className="mx-auto max-w-7xl px-5 pb-16 pt-8">
       <div className="mb-8">
         <h1 className="font-serif text-3xl text-[color:var(--ink)] md:text-4xl">{heading}</h1>
         <p className="mt-2 font-serif text-base italic text-[color:var(--accent)]">{config.business.tagline}</p>
@@ -114,15 +115,33 @@ export default async function ProductsPage({
       </div>
 
       <form method="get" className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_1fr]">
+        {/* Mobile-only drawer toggle — CSS-only (peer checkbox), no client JS
+            needed since the rest of this form is a plain server-rendered GET. */}
+        <input type="checkbox" id="mobile-filters" className="peer hidden" />
+        <label
+          htmlFor="mobile-filters"
+          className="flex cursor-pointer items-center justify-between rounded-xl border border-[color:var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[color:var(--ink)] lg:hidden"
+        >
+          <span className="flex items-center gap-2">
+            <SlidersHorizontal size={16} /> Filter &amp; Sort
+          </span>
+          {hasFilters && <span className="text-xs font-semibold text-[color:var(--accent)]">Active</span>}
+        </label>
+
         {/* ─── Filter & Sort sidebar ─────────────────────────────────────── */}
-        <aside className="filter-accordion h-fit rounded-2xl border border-[color:var(--border)] bg-white lg:sticky lg:top-6">
+        <aside className="filter-accordion fixed inset-0 z-50 hidden overflow-y-auto bg-white peer-checked:block lg:sticky lg:top-6 lg:z-auto lg:block lg:h-fit lg:rounded-2xl lg:border lg:border-[color:var(--border)]">
           <div className="flex items-center justify-between border-b border-[color:var(--border)] px-4 py-3.5">
             <span className="text-xs font-bold uppercase tracking-widest text-[color:var(--ink)]">Filter &amp; Sort</span>
-            {hasFilters && (
-              <Link href="/products" className="text-xs font-medium text-[color:var(--accent)] underline underline-offset-2">
-                Clear
-              </Link>
-            )}
+            <div className="flex items-center gap-4">
+              {hasFilters && (
+                <Link href="/products" className="text-xs font-medium text-[color:var(--accent)] underline underline-offset-2">
+                  Clear
+                </Link>
+              )}
+              <label htmlFor="mobile-filters" aria-label="Close filters" className="cursor-pointer text-[color:var(--ink)]/50 hover:text-[color:var(--ink)] lg:hidden">
+                <X size={18} />
+              </label>
+            </div>
           </div>
 
           <div className="divide-y divide-[color:var(--border)] px-4">

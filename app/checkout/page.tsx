@@ -2,10 +2,15 @@
 
 import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import Script from 'next/script';
+import { X, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useCart } from '@/app/contexts/CartContext';
 import { ShippingOption } from '@/lib/dristaService';
+import { formatINR } from '@/lib/format';
+import { INDIAN_STATES, COUNTRIES } from '@/lib/addressData';
+import AddressBook from './AddressBook';
 
 declare global {
   interface Window {
@@ -13,10 +18,12 @@ declare global {
   }
 }
 
-function AuthPanel() {
+function AuthPanel({ onClose }: { onClose?: () => void }) {
   const { login, register } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', password: '', phone: '' });
+  const [identifier, setIdentifier] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [form, setForm] = useState({ first_name: '', last_name: '', phone: '', email: '', password: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +33,7 @@ function AuthPanel() {
     setError(null);
     try {
       if (mode === 'login') {
-        await login(form.email, form.password);
+        await login(identifier, loginPassword);
       } else {
         await register(form);
       }
@@ -40,7 +47,20 @@ function AuthPanel() {
   const inputCls = 'w-full rounded-lg border border-[color:var(--border)] bg-white px-4 py-2.5 text-sm outline-none focus:border-[color:var(--accent)]';
 
   return (
-    <div className="mx-auto max-w-sm rounded-2xl border border-[color:var(--border)] bg-white p-6">
+    <div className="relative mx-auto w-full max-w-sm rounded-2xl border border-[color:var(--border)] bg-white p-6 shadow-xl">
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-4 top-4 text-[color:var(--ink)]/40 hover:text-[color:var(--ink)]"
+        >
+          <X size={18} />
+        </button>
+      )}
+
+      <p className="mb-4 text-sm text-[color:var(--ink)]/60">Sign in to save your address and complete your order.</p>
+
       <div className="mb-5 flex gap-4 border-b border-[color:var(--border)]">
         {(['login', 'register'] as const).map((m) => (
           <button
@@ -56,17 +76,22 @@ function AuthPanel() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        {mode === 'register' && (
-          <div className="grid grid-cols-2 gap-3">
-            <input required placeholder="First name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className={inputCls} />
-            <input required placeholder="Last name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className={inputCls} />
-          </div>
+        {mode === 'login' ? (
+          <>
+            <input required placeholder="Phone or email" value={identifier} onChange={(e) => setIdentifier(e.target.value)} className={inputCls} />
+            <input required type="password" placeholder="Password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className={inputCls} />
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <input required placeholder="First name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className={inputCls} />
+              <input required placeholder="Last name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className={inputCls} />
+            </div>
+            <input required type="tel" placeholder="Phone number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} />
+            <input type="email" placeholder="Email (optional)" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} />
+            <input required type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={inputCls} />
+          </>
         )}
-        {mode === 'register' && (
-          <input placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} />
-        )}
-        <input required type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} />
-        <input required type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={inputCls} />
 
         {error && <p className="text-sm text-red-500">{error}</p>}
 
@@ -82,6 +107,20 @@ function AuthPanel() {
   );
 }
 
+// Keeps the order summary visible behind a dimmed backdrop while signing in —
+// checkout is the one place a guest actually needs an account, so this makes
+// that requirement feel like a deliberate step in the flow rather than a
+// dead-end page swap that loses all context of what they were buying.
+function AuthModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()}>
+        <AuthPanel onClose={onClose} />
+      </div>
+    </div>
+  );
+}
+
 function CheckoutForm() {
   const { user } = useAuth();
   const { cart, refresh } = useCart();
@@ -89,8 +128,10 @@ function CheckoutForm() {
   const searchParams = useSearchParams();
   const couponFromCart = searchParams.get('coupon') || '';
 
+  const [authModalOpen, setAuthModalOpen] = useState(!user);
   const [step, setStep] = useState<'details' | 'payment'>('details');
-  const [address, setAddress] = useState({ line1: '', line2: '', city: '', state: '', pincode: '' });
+  const [address, setAddress] = useState({ line1: '', line2: '', city: '', state: '', pincode: '', country: 'India' });
+  const [phone, setPhone] = useState(user?.phone || '');
   const [gstin, setGstin] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod'>('online');
   const [placing, setPlacing] = useState(false);
@@ -109,6 +150,14 @@ function CheckoutForm() {
 
   // Preview only — checkout recomputes the chosen option itself server-side
   // from the real address, so a stale/tampered rate here can't affect what's
+  // The auth modal resolves after this component's first render (guest → signed
+  // in without a remount), so the initial useState(user?.phone) miss needs this
+  // to backfill once the account — and its saved phone — actually loads in.
+  useEffect(() => {
+    if (user?.phone && !phone) setPhone(user.phone);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.phone]);
+
   // actually charged. Silently shows no options if the lookup fails (e.g. the
   // store hasn't set up any delivery method yet) rather than an error.
   useEffect(() => {
@@ -158,6 +207,7 @@ function CheckoutForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           shipping_address: address,
+          phone: phone.trim() || undefined,
           coupon_code: couponFromCart || undefined,
           shipping_option_id: selectedOptionId || undefined,
           gstin: gstin.trim() || undefined,
@@ -172,7 +222,7 @@ function CheckoutForm() {
       // fully placed (confirmed + billed) the moment checkout succeeds.
       if (paymentMethod === 'cod') {
         await refresh();
-        router.push(`/order-success?orderId=${order.id}`);
+        router.push(`/order-success?orderId=${order.id}&method=cod`);
         return;
       }
 
@@ -220,7 +270,7 @@ function CheckoutForm() {
             const verifyPayload = await verifyRes.json();
             if (!verifyRes.ok) throw new Error(verifyPayload?.error || 'Payment verification failed');
             await refresh();
-            router.push(`/order-success?orderId=${order.id}`);
+            router.push(`/order-success?orderId=${order.id}&method=online`);
           } catch (err: any) {
             setError(err.message || 'Payment verification failed');
           }
@@ -236,12 +286,64 @@ function CheckoutForm() {
     }
   };
 
-  if (!user) return <AuthPanel />;
   if (items.length === 0) {
-    return <p className="text-center text-[color:var(--ink)]/60">Your cart is empty.</p>;
+    return (
+      <div className="mx-auto flex max-w-sm flex-col items-center py-10 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[color:var(--cream)]">
+          <ShoppingBag size={22} className="text-[color:var(--ink)]/40" />
+        </div>
+        <h2 className="mt-4 font-serif text-xl text-[color:var(--ink)]">Your cart is empty</h2>
+        <p className="mt-1 text-sm text-[color:var(--ink)]/60">Add something you love, then come back to check out.</p>
+        <Link
+          href="/products"
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-[color:var(--primary)] px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+        >
+          Continue Shopping
+        </Link>
+      </div>
+    );
   }
 
   const inputCls = 'w-full rounded-lg border border-[color:var(--border)] bg-white px-4 py-2.5 text-sm outline-none focus:border-[color:var(--accent)]';
+
+  if (!user) {
+    return (
+      <div className="grid gap-10 md:grid-cols-2">
+        {authModalOpen && <AuthModal onClose={() => setAuthModalOpen(false)} />}
+
+        <div className="rounded-2xl border border-[color:var(--border)] bg-white p-6 text-center">
+          <h2 className="font-serif text-xl text-[color:var(--ink)]">Sign in to continue</h2>
+          <p className="mt-2 text-sm text-[color:var(--ink)]/60">
+            Your {items.length} item{items.length > 1 ? 's' : ''} {items.length > 1 ? 'are' : 'is'} saved — sign in or create an account to enter your delivery address and complete your order.
+          </p>
+          <button
+            type="button"
+            onClick={() => setAuthModalOpen(true)}
+            className="mt-5 rounded-full bg-[color:var(--primary)] px-6 py-3 text-sm font-semibold text-white hover:-translate-y-0.5 transition-transform"
+          >
+            Sign In to Continue
+          </button>
+        </div>
+
+        <div className="rounded-2xl border border-[color:var(--border)] bg-white p-6">
+          <h2 className="font-serif text-xl text-[color:var(--ink)]">Order Summary</h2>
+          <div className="mt-4 space-y-2 text-sm">
+            {items.map((item) => (
+              <div key={item.id} className="flex justify-between text-[color:var(--ink)]/70">
+                <span>{item.item?.name} × {item.quantity}</span>
+                <span>₹{formatINR(item.quantity * (item.variant?.selling_price ?? item.item?.selling_price ?? 0))}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex justify-between border-t border-[color:var(--border)] pt-3 text-base font-semibold text-[color:var(--ink)]">
+            <span>Subtotal</span>
+            <span>₹{formatINR(subtotal)}</span>
+          </div>
+          <p className="mt-1 text-xs text-[color:var(--ink)]/40">Shipping and GST calculated after sign-in.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-10 md:grid-cols-2">
@@ -256,14 +358,46 @@ function CheckoutForm() {
 
         {step === 'details' && (
           <form onSubmit={handleContinueToPayment} className="space-y-3">
-            <h2 className="font-serif text-xl text-[color:var(--ink)]">Shipping Address</h2>
+            <AddressBook
+              onSelect={(details) => {
+                setAddress({
+                  line1: details.line1, line2: details.line2 || '', city: details.city,
+                  state: details.state, pincode: details.pincode, country: details.country || 'India',
+                });
+                if (details.phone) setPhone(details.phone);
+              }}
+            />
+
+            <h2 className="font-serif text-xl text-[color:var(--ink)]">
+              {user ? 'Or Enter a New Address' : 'Shipping Address'}
+            </h2>
             <input required placeholder="Address line 1" value={address.line1} onChange={(e) => setAddress({ ...address, line1: e.target.value })} className={inputCls} />
             <input placeholder="Address line 2 (optional)" value={address.line2} onChange={(e) => setAddress({ ...address, line2: e.target.value })} className={inputCls} />
             <div className="grid grid-cols-2 gap-3">
               <input required placeholder="City" value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })} className={inputCls} />
-              <input required placeholder="State" value={address.state} onChange={(e) => setAddress({ ...address, state: e.target.value })} className={inputCls} />
+              <select required value={address.state} onChange={(e) => setAddress({ ...address, state: e.target.value })} className={inputCls}>
+                <option value="" disabled>State</option>
+                {INDIAN_STATES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
             </div>
-            <input required placeholder="Pincode" value={address.pincode} onChange={(e) => setAddress({ ...address, pincode: e.target.value })} className={inputCls} />
+            <div className="grid grid-cols-2 gap-3">
+              <input required placeholder="Pincode" value={address.pincode} onChange={(e) => setAddress({ ...address, pincode: e.target.value })} className={inputCls} />
+              <select required value={address.country} onChange={(e) => setAddress({ ...address, country: e.target.value })} className={inputCls}>
+                {COUNTRIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <input
+              required
+              type="tel"
+              placeholder="Contact phone (for delivery)"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className={inputCls}
+            />
 
             {/^\d{6}$/.test(address.pincode) && (
               <div className="pt-2">
@@ -295,7 +429,7 @@ function CheckoutForm() {
                             {option.etaDays ? <span className="text-[color:var(--ink)]/50"> · {option.etaDays} day{option.etaDays > 1 ? 's' : ''}</span> : null}
                           </span>
                         </span>
-                        <span className="font-semibold">{option.rate > 0 ? `₹${option.rate.toLocaleString('en-IN')}` : 'Free'}</span>
+                        <span className="font-semibold">{option.rate > 0 ? `₹${formatINR(option.rate)}` : 'Free'}</span>
                       </label>
                     ))}
                   </div>
@@ -328,8 +462,9 @@ function CheckoutForm() {
                 <button onClick={() => setStep('details')} className="text-xs font-semibold text-[color:var(--accent)] hover:underline">Edit</button>
               </div>
               <p className="mt-2 text-[color:var(--ink)]/70">
-                {[address.line1, address.line2, address.city, address.state, address.pincode].filter(Boolean).join(', ')}
+                {[address.line1, address.line2, address.city, address.state, address.pincode, address.country].filter(Boolean).join(', ')}
               </p>
+              {phone && <p className="mt-2 text-[color:var(--ink)]/70">Phone: {phone}</p>}
               {selectedOption && <p className="mt-2 text-[color:var(--ink)]/70">Delivery: {selectedOption.label}</p>}
               {gstin && <p className="mt-2 text-[color:var(--ink)]/70">GSTIN: {gstin}</p>}
             </div>
@@ -381,24 +516,24 @@ function CheckoutForm() {
           {items.map((item) => (
             <div key={item.id} className="flex justify-between text-[color:var(--ink)]/70">
               <span>{item.item?.name} × {item.quantity}</span>
-              <span>₹{(item.quantity * (item.variant?.selling_price ?? item.item?.selling_price ?? 0)).toLocaleString('en-IN')}</span>
+              <span>₹{formatINR(item.quantity * (item.variant?.selling_price ?? item.item?.selling_price ?? 0))}</span>
             </div>
           ))}
         </div>
         <div className="mt-4 space-y-1.5 border-t border-[color:var(--border)] pt-3 text-sm">
           <div className="flex justify-between text-[color:var(--ink)]/70">
             <span>Subtotal</span>
-            <span>₹{subtotal.toLocaleString('en-IN')}</span>
+            <span>₹{formatINR(subtotal)}</span>
           </div>
           {selectedOption && (
             <div className="flex justify-between text-[color:var(--ink)]/70">
               <span>Shipping ({selectedOption.label})</span>
-              <span>{selectedOption.rate > 0 ? `₹${selectedOption.rate.toLocaleString('en-IN')}` : 'Free'}</span>
+              <span>{selectedOption.rate > 0 ? `₹${formatINR(selectedOption.rate)}` : 'Free'}</span>
             </div>
           )}
           <div className="flex justify-between pt-1.5 text-base font-semibold text-[color:var(--ink)]">
             <span>Total</span>
-            <span>₹{total.toLocaleString('en-IN')}</span>
+            <span>₹{formatINR(total)}</span>
           </div>
           <p className="text-xs text-[color:var(--ink)]/40">Plus applicable GST, calculated at checkout.</p>
         </div>

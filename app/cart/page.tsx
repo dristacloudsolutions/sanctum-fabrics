@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Trash2, ArrowLeft, Tag } from 'lucide-react';
 import { useCart } from '@/app/contexts/CartContext';
 import { CouponPreview } from '@/lib/dristaService';
+import { formatINR } from '@/lib/format';
 
 export default function CartPage() {
   const { cart, updateQuantity, removeItem, loading } = useCart();
@@ -85,7 +86,7 @@ export default function CartPage() {
                     {Object.entries(item.variant.attributes).map(([k, v]) => `${k}: ${v}`).join(' · ')}
                   </p>
                 )}
-                <p className="mt-1 text-sm text-[color:var(--ink)]/70">₹{Number(price).toLocaleString('en-IN')}</p>
+                <p className="mt-1 text-sm text-[color:var(--ink)]/70">₹{formatINR(price)}</p>
               </div>
 
               <div className="flex items-center rounded-full border border-[color:var(--border)]">
@@ -107,7 +108,7 @@ export default function CartPage() {
               </div>
 
               <p className="w-24 text-right text-sm font-semibold text-[color:var(--ink)]">
-                ₹{(price * item.quantity).toLocaleString('en-IN')}
+                ₹{formatINR(price * item.quantity)}
               </p>
 
               <button
@@ -143,22 +144,22 @@ export default function CartPage() {
           </button>
         </div>
         {couponError && <p className="text-sm text-red-500">{couponError}</p>}
-        {couponPreview && <p className="text-sm text-emerald-600">"{couponPreview.name}" applied — you save ₹{couponPreview.discount_amount.toLocaleString('en-IN')}</p>}
+        {couponPreview && <p className="text-sm text-emerald-600">"{couponPreview.name}" applied — you save ₹{formatINR(couponPreview.discount_amount)}</p>}
 
         <div className="w-full max-w-sm space-y-1.5 text-sm">
           <div className="flex justify-between text-[color:var(--ink)]/70">
             <span>Subtotal</span>
-            <span>₹{subtotal.toLocaleString('en-IN')}</span>
+            <span>₹{formatINR(subtotal)}</span>
           </div>
           {discount > 0 && (
             <div className="flex justify-between text-emerald-600">
               <span>Discount</span>
-              <span>−₹{discount.toLocaleString('en-IN')}</span>
+              <span>−₹{formatINR(discount)}</span>
             </div>
           )}
           <div className="flex justify-between border-t border-[color:var(--border)] pt-2 text-base font-semibold text-[color:var(--ink)]">
             <span>Total</span>
-            <span>₹{total.toLocaleString('en-IN')}</span>
+            <span>₹{formatINR(total)}</span>
           </div>
         </div>
 

@@ -94,28 +94,30 @@ export default async function Home() {
               <span className="h-px flex-1 bg-[color:var(--accent)]/40" />
             </div>
           </Reveal>
-          <div className="mt-8 grid gap-5 md:grid-cols-3">
+          {/* flex-wrap + fixed card width (not a 3-col grid) so this still looks
+              intentional with 1 or 2 categories, not a mostly-empty row. */}
+          <div className="mt-8 flex flex-wrap justify-center gap-6">
             {topCategories.map((cat, i) => (
               <Reveal key={cat.id} delay={i * 0.1}>
                 <Link
                   href={`/products?category=${cat.id}`}
-                  className="group flex h-full items-stretch overflow-hidden rounded-2xl bg-[color:var(--cream)] transition-shadow hover:shadow-lg"
+                  className="group relative block w-full max-w-xs overflow-hidden rounded-2xl shadow-sm transition-shadow hover:shadow-xl sm:w-72"
                 >
-                  <div className="flex flex-1 flex-col justify-center gap-3 p-6">
-                    <p className="font-serif text-xl text-[color:var(--ink)]">{cat.name}</p>
-                    {cat.description && (
-                      <p className="text-xs leading-relaxed text-[color:var(--ink)]/60">{cat.description}</p>
-                    )}
-                    <p className="text-sm font-semibold text-[color:var(--accent)]">Explore {cat.name} →</p>
-                  </div>
-                  <div className="relative w-2/5 shrink-0 overflow-hidden">
+                  <div className="relative aspect-[4/5] w-full overflow-hidden bg-[color:var(--cream)]">
                     {cat.image_url ? (
                       <Image src={cat.image_url} alt={cat.name} fill unoptimized className="object-cover transition-transform duration-500 group-hover:scale-105" />
                     ) : (
-                      <div className="flex h-full items-center justify-center bg-gradient-to-br from-[color:var(--primary)]/10 to-[color:var(--accent)]/10 font-serif text-3xl text-[color:var(--primary)]/40">
+                      <div className="flex h-full items-center justify-center bg-gradient-to-br from-[color:var(--primary)]/10 to-[color:var(--accent)]/10 font-serif text-5xl text-[color:var(--primary)]/40">
                         {cat.name.slice(0, 1)}
                       </div>
                     )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                  </div>
+                  <div className="absolute inset-x-0 bottom-0 p-5">
+                    <p className="font-serif text-xl text-white">{cat.name}</p>
+                    <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-white/85 transition-colors group-hover:text-[color:var(--accent)]">
+                      Explore <span aria-hidden>→</span>
+                    </p>
                   </div>
                 </Link>
               </Reveal>
@@ -158,11 +160,11 @@ export default async function Home() {
 
       {/* Specialities & Traditions of South India */}
       <section id="story" className="relative overflow-hidden border-y border-[color:var(--border)] scroll-mt-24">
-        <div className="relative h-64 w-full sm:h-80 md:h-[380px]">
+        <div className="relative h-72 w-full sm:h-96 md:h-[480px]">
           <Image src="/traditions.png" alt="Specialities & Traditions of South India" fill className="object-cover object-left md:object-center" />
         </div>
 
-        <div className="bg-[color:var(--cream)] px-5 py-10 md:absolute md:inset-0 md:flex md:items-center md:bg-transparent md:p-0">
+        <div className="bg-[color:var(--cream)] px-5 py-14 md:absolute md:inset-0 md:flex md:items-center md:bg-transparent md:p-0">
           <div className="w-full md:px-5 lg:px-12">
             <Reveal delay={0.15}>
               <div className="mx-auto max-w-xl md:ml-auto md:mr-0">
@@ -190,7 +192,7 @@ export default async function Home() {
                     href={buildWhatsAppLink("Hi Sanctum Fabrics, I'd like to place an order.")}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+                    className="inline-flex items-center gap-2 bg-[color:var(--accent)] px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
                   >
                     <MessageCircle size={16} /> Order on WhatsApp
                   </a>
@@ -228,7 +230,7 @@ export default async function Home() {
       </section>
 
       {/* WhatsApp signup banner */}
-      <section className="border-t border-[color:var(--border)] bg-[color:var(--primary)]">
+      <section className="border-t border-[color:var(--border)] bg-[color:var(--ink)]">
         <Reveal>
           <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-5 py-6 text-center md:flex-row md:text-left">
             <div>

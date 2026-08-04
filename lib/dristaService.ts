@@ -22,12 +22,14 @@ export type Product = {
   name: string;
   description?: string;
   sku?: string;
+  item_code?: string;
   selling_price?: number;
   base_price?: number;
   current_stock?: number;
   maintain_stock?: boolean;
   item_category?: 'goods' | 'service';
   is_active?: boolean;
+  sale_channel?: 'online' | 'offline' | 'both';
   images?: ProductImage[];
   item_type?: { name?: string } | null;
   uom?: { name?: string } | null;
@@ -114,6 +116,7 @@ export type Promotion = {
   min_order_amount?: number;
   max_discount_amount?: number;
   end_date: string;
+  image_url?: string;
 };
 
 export type CategoryGroup = {
@@ -291,7 +294,9 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
     const query = qs.toString();
     const payload = await dristaFetch(`/v1/ecommerce/products${query ? `?${query}` : ''}`);
     const items = (payload?.data || []) as Product[];
-    return items.filter((i) => i.is_active !== false).map(withResolvedImages);
+    return items
+      .filter((i) => i.is_active !== false && i.sale_channel !== 'offline')
+      .map(withResolvedImages);
   } catch (error) {
     console.error('[dristaService] getProducts error:', error);
     return [];
@@ -302,7 +307,8 @@ export async function getProduct(id: string): Promise<Product | null> {
   try {
     const payload = await dristaFetch(`/v1/ecommerce/products/${id}`);
     const item = payload?.data as Product | undefined;
-    return item ? withResolvedImages(item) : null;
+    if (!item || item.is_active === false || item.sale_channel === 'offline') return null;
+    return withResolvedImages(item);
   } catch (error) {
     console.error('[dristaService] getProduct error:', error);
     return null;
@@ -381,18 +387,20 @@ async function dristaAction(endpoint: string, options: RequestInit & { token?: s
 }
 
 export async function registerCustomer(data: {
-  first_name: string; last_name: string; email: string; password: string; phone?: string;
+  first_name: string; last_name: string; phone: string; password: string; email?: string;
 }): Promise<CustomerSession> {
   const payload = await dristaAction('/v1/ecommerce/auth/register', { method: 'POST', body: JSON.stringify(data) });
   return payload.data as CustomerSession;
 }
 
-export async function loginCustomer(data: { email: string; password: string }): Promise<CustomerSession> {
+// Accepts either identifier — phone is now the primary way customers sign in,
+// but existing accounts (or ones that did set an email) can still use email.
+export async function loginCustomer(data: { phone?: string; email?: string; password: string }): Promise<CustomerSession> {
   const payload = await dristaAction('/v1/auth/login', { method: 'POST', body: JSON.stringify(data) });
   return payload.data as CustomerSession;
 }
 
-export type CustomerProfile = { id: string; first_name: string; last_name: string; email: string; phone?: string; role: string };
+export type CustomerProfile = { id: string; first_name: string; last_name: string; email?: string; phone?: string; role: string };
 
 export async function getMe(token: string): Promise<CustomerProfile | null> {
   try {
@@ -406,6 +414,52 @@ export async function getMe(token: string): Promise<CustomerProfile | null> {
 export async function getOrCreateCart(token?: string): Promise<{ id: string }> {
   const payload = await dristaAction('/v1/ecommerce/cart', { token });
   return payload.data as { id: string };
+}
+
+export type AddressDetails = {
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  pincode: string;
+  country: string;
+  phone?: string;
+  lat?: number;
+  lng?: number;
+};
+
+export type CustomerAddress = {
+  id: string;
+  address_type: 'Home' | 'Work' | 'Other';
+  is_default: boolean;
+  details: AddressDetails;
+  created_at?: string;
+};
+
+export async function getCustomerAddresses(token: string): Promise<CustomerAddress[]> {
+  const payload = await dristaAction('/v1/ecommerce/addresses', { token });
+  return (payload?.data || []) as CustomerAddress[];
+}
+
+export async function createCustomerAddress(
+  data: { address_type: string; is_default?: boolean; details: AddressDetails },
+  token: string
+): Promise<CustomerAddress> {
+  const payload = await dristaAction('/v1/ecommerce/addresses', { method: 'POST', body: JSON.stringify(data), token });
+  return payload.data as CustomerAddress;
+}
+
+export async function updateCustomerAddress(
+  id: string,
+  data: Partial<{ address_type: string; is_default: boolean; details: AddressDetails }>,
+  token: string
+): Promise<CustomerAddress> {
+  const payload = await dristaAction(`/v1/ecommerce/addresses/${id}`, { method: 'PUT', body: JSON.stringify(data), token });
+  return payload.data as CustomerAddress;
+}
+
+export async function deleteCustomerAddress(id: string, token: string): Promise<void> {
+  await dristaAction(`/v1/ecommerce/addresses/${id}`, { method: 'DELETE', token });
 }
 
 // Returns null (rather than throwing) when the cart id doesn't resolve to a real

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Package, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { SalesOrder } from '@/lib/dristaService';
+import { formatINR } from '@/lib/format';
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   paid: { label: 'Paid', cls: 'bg-emerald-50 text-emerald-700' },
@@ -103,7 +104,7 @@ export default function OrdersPage() {
                   <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${status.cls}`}>{status.label}</span>
                   {fulfillment && <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${fulfillment.cls}`}>{fulfillment.label}</span>}
                 </div>
-                <p className="w-28 text-right text-sm font-semibold text-[color:var(--ink)]">₹{Number(order.total_amount).toLocaleString('en-IN')}</p>
+                <p className="w-28 text-right text-sm font-semibold text-[color:var(--ink)]">₹{formatINR(order.total_amount)}</p>
                 <ChevronRight size={16} className="text-[color:var(--ink)]/30" />
               </Link>
             );

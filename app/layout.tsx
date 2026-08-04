@@ -10,6 +10,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import FloatingActions from "./components/FloatingActions";
 import PromoBanner from "./components/PromoBanner";
+import FlashSaleModal from "./components/FlashSaleModal";
 import config from "./config/config";
 import { getTenantProfile, getActivePromotions, getCategoryHierarchy, getMe, getCart, Cart, CustomerProfile } from "@/lib/dristaService";
 
@@ -63,6 +64,7 @@ export default async function RootLayout({
             <CartProvider initialCart={initialCart}>
               <WishlistProvider>
                 <PromoBanner promotions={promotions} />
+                <FlashSaleModal promotions={promotions} />
                 <Header categories={categories} />
                 <main className="flex-1">{children}</main>
                 <Footer tenantProfile={tenantProfile} />
