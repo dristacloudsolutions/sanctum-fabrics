@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Mail, Phone, MapPin } from 'lucide-react';
 import config from '@/app/config/config';
 import { TenantProfile } from '@/lib/dristaService';
@@ -34,9 +35,12 @@ export default function Footer({ tenantProfile }: { tenantProfile?: TenantProfil
   const name = tenantProfile?.name || business.name;
   const email = tenantProfile?.email || business.contact.email;
   const phone = tenantProfile?.phone || business.contact.phone;
-  const address = business.contact.address;
+  const addr = tenantProfile?.contact_address;
+  const address = addr
+    ? [addr.line1, addr.line2, addr.city, addr.state, addr.postal_code, addr.country].filter(Boolean).join(', ')
+    : business.contact.address.replace(/\n/g, ', ');
   const instagram = tenantProfile?.settings?.social?.instagram || business.social.instagram;
-  const facebook = business.social.facebook;
+  const facebook = tenantProfile?.settings?.social?.facebook || business.social.facebook;
 
   const socialLinks = [
     facebook && { href: facebook, label: 'Facebook', Icon: FacebookIcon },
@@ -45,76 +49,59 @@ export default function Footer({ tenantProfile }: { tenantProfile?: TenantProfil
   ].filter((s): s is { href: string; label: string; Icon: typeof InstagramIcon } => Boolean(s));
 
   return (
-    <footer className="mt-24 border-t border-[color:var(--border)] bg-[color:var(--primary)] text-[color:var(--cream)]">
-      {/* Visit our boutique + stay updated */}
-      <div className="border-b border-white/10">
-        <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 md:grid-cols-2">
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[color:var(--cream)]/50">
-              Visit Our Boutique
-            </p>
-            <div className="space-y-2 text-sm text-[color:var(--cream)]/80">
-              <p className="flex items-start gap-2">
-                <MapPin size={15} className="mt-0.5 shrink-0" />
-                <span className="whitespace-pre-line">{address}</span>
-              </p>
-              <a href={`tel:${phone}`} className="flex items-center gap-2 hover:text-white">
-                <Phone size={14} /> {phone}
-              </a>
-              <a href={`mailto:${email}`} className="flex items-center gap-2 hover:text-white">
-                <Mail size={14} /> {email}
-              </a>
-            </div>
+    <footer className="bg-[#141414] text-white/70">
+      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-10 sm:grid-cols-2 lg:grid-cols-6 lg:items-start">
+        <div className="lg:col-span-1">
+          <div className="inline-block rounded-lg bg-white p-2">
+            <Image src="/logo.jpg" alt={name} width={1128} height={356} className="h-10 w-auto" />
           </div>
+          <p className="mt-3 max-w-[200px] text-xs text-white/50">{business.tagline}</p>
+        </div>
 
-          <div className="flex flex-col justify-center md:items-end md:text-right">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-[color:var(--cream)]/50">
-              Stay Updated
+        <div className="text-sm">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white">Visit Our Boutique</p>
+          <div className="flex flex-col gap-1.5 text-white/60">
+            <p className="flex items-start gap-2">
+              <MapPin size={15} className="mt-0.5 shrink-0" />
+              <span>{address}</span>
             </p>
-            <p className="max-w-xs text-sm text-[color:var(--cream)]/70 md:text-right">
-              Message us on WhatsApp to hear about new arrivals and exclusive offers first.
-            </p>
-            <a
-              href={buildWhatsAppLink(`Hi ${name}, I'd like to stay updated on new arrivals.`)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-white transition-transform hover:-translate-y-0.5"
-            >
-              <WhatsAppIcon size={13} /> Message Us
+            <a href={`tel:${phone}`} className="flex items-center gap-2 hover:text-white">
+              <Phone size={14} /> {phone}
+            </a>
+            <a href={`mailto:${email}`} className="flex items-center gap-2 hover:text-white">
+              <Mail size={14} /> {email}
             </a>
           </div>
         </div>
-      </div>
-
-      {/* Link columns */}
-      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <p className="font-serif text-lg">{name}</p>
-          <p className="mt-2 max-w-xs text-sm text-[color:var(--cream)]/70">{business.tagline}</p>
-        </div>
 
         <div className="text-sm">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[color:var(--cream)]/50">Quick Links</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white">Quick Links</p>
           <div className="flex flex-col gap-1.5">
-            <Link href="/" className="text-[color:var(--cream)]/80 hover:text-white">Home</Link>
-            <Link href="/products" className="text-[color:var(--cream)]/80 hover:text-white">Collections</Link>
-            <Link href="/#story" className="text-[color:var(--cream)]/80 hover:text-white">About Us</Link>
-            <Link href="/contact" className="text-[color:var(--cream)]/80 hover:text-white">Contact Us</Link>
+            <Link href="/" className="text-white/60 hover:text-white">Home</Link>
+            <Link href="/products" className="text-white/60 hover:text-white">Collections</Link>
           </div>
         </div>
 
         <div className="text-sm">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[color:var(--cream)]/50">Policies</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white">Customer Care</p>
           <div className="flex flex-col gap-1.5">
-            <Link href="/terms" className="text-[color:var(--cream)]/80 hover:text-white">Terms &amp; Conditions</Link>
-            <Link href="/privacy" className="text-[color:var(--cream)]/80 hover:text-white">Privacy Policy</Link>
-            <Link href="/returns" className="text-[color:var(--cream)]/80 hover:text-white">Returns &amp; Exchanges</Link>
-            <Link href="/shipping" className="text-[color:var(--cream)]/80 hover:text-white">Shipping Policy</Link>
+            <Link href="/#story" className="text-white/60 hover:text-white">About Us</Link>
+            <Link href="/contact" className="text-white/60 hover:text-white">Contact Us</Link>
+            <Link href="/shipping" className="text-white/60 hover:text-white">Shipping Policy</Link>
+            <Link href="/returns" className="text-white/60 hover:text-white">Returns &amp; Exchange</Link>
           </div>
         </div>
 
         <div className="text-sm">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[color:var(--cream)]/50">Follow Us</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white">Help</p>
+          <div className="flex flex-col gap-1.5">
+            <Link href="/terms" className="text-white/60 hover:text-white">Terms &amp; Conditions</Link>
+            <Link href="/privacy" className="text-white/60 hover:text-white">Privacy Policy</Link>
+          </div>
+        </div>
+
+        <div className="text-sm">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white">Follow Us</p>
           <div className="flex items-center gap-3">
             {socialLinks.map(({ href, label, Icon }) => (
               <a
@@ -123,16 +110,16 @@ export default function Footer({ tenantProfile }: { tenantProfile?: TenantProfil
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={label}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-[color:var(--cream)]/80 transition-colors hover:border-white/40 hover:text-white"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-white/70 transition-colors hover:border-white/40 hover:text-white"
               >
-                <Icon size={15} />
+                <Icon size={14} />
               </a>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="border-t border-white/10 px-5 py-4 text-center text-xs text-[color:var(--cream)]/50">
+      <div className="border-t border-white/10 px-5 py-4 text-center text-xs text-white/40">
         © {new Date().getFullYear()} {name}. All rights reserved.
       </div>
     </footer>

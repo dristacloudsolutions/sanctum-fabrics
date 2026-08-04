@@ -122,6 +122,7 @@ export type CategoryGroup = {
   slug: string;
   parent_id?: string;
   image_url?: string;
+  description?: string;
   children?: CategoryGroup[];
 };
 

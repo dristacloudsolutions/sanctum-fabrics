@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
-import { Menu, X, ShoppingBag, User, Heart, Search, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, X, ShoppingBag, User, Heart, LogOut, ChevronDown } from 'lucide-react';
 import config from '@/app/config/config';
 import { useCart } from '@/app/contexts/CartContext';
 import { useAuth } from '@/app/contexts/AuthContext';
@@ -35,24 +36,6 @@ function WhatsAppIcon({ size = 14 }: { size?: number }) {
   );
 }
 
-// Decorative diamond/flower mark for the logo lockup — not brand artwork,
-// just a simple motif in the accent colour.
-function LogoMark({ size = 34 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
-      <rect x="20" y="2" width="18" height="18" rx="5" transform="rotate(45 20 2)" fill="var(--accent)" opacity="0.15" />
-      <path
-        d="M20 6 L26 14 L20 34 L14 14 Z"
-        fill="none"
-        stroke="var(--accent)"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <circle cx="20" cy="13" r="2.5" fill="var(--accent)" />
-    </svg>
-  );
-}
-
 export default function Header({ categories = [] }: { categories?: CategoryGroup[] }) {
   const [open, setOpen] = useState(false);
   const [collectionsOpen, setCollectionsOpen] = useState(false);
@@ -60,12 +43,6 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
   const { user, logout } = useAuth();
   const { itemIds: wishlistIds } = useWishlist();
   const { business } = config;
-
-  // "Sanctum Fabrics" → "Sanctum" (bold navy) / "Fabrics" (tracked accent) —
-  // a styling split of the real business name, not invented copy.
-  const nameParts = business.name.trim().split(/\s+/);
-  const nameFirst = nameParts[0] || business.name;
-  const nameRest = nameParts.slice(1).join(' ');
 
   // First few real categories shown as flat nav links (matching the flat
   // Sarees/Churidars/Tops layout of the reference); the rest live in the
@@ -75,7 +52,7 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
   const dropdownCategories = categories.slice(3);
 
   return (
-    <header className="sticky top-0 z-50 bg-[color:var(--cream)]/95 backdrop-blur">
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur">
       {/* Welcome / social top bar */}
       <div className="hidden bg-[color:var(--ink)] px-5 py-2 text-white sm:block">
         <div className="mx-auto flex max-w-6xl items-center justify-between text-xs">
@@ -103,19 +80,12 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
 
       {/* Main row */}
       <div className="border-b border-[color:var(--border)]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-5 py-4">
-          <Link href="/" className="flex shrink-0 items-center gap-2.5">
-            <LogoMark />
-            <span>
-              <span className="block font-serif text-xl font-bold leading-tight text-[color:var(--ink)]">
-                {nameFirst}
-                {nameRest && <span className="ml-1.5 text-sm font-semibold uppercase tracking-[0.2em] text-[color:var(--accent)]">{nameRest}</span>}
-              </span>
-              <span className="block text-[11px] text-[color:var(--ink)]/50">{business.tagline}</span>
-            </span>
+        <div className="mx-auto flex max-w-6xl items-center gap-6 px-5 py-2">
+          <Link href="/" className="flex shrink-0 items-center">
+            <Image src="/logo.jpg" alt={business.name} width={1128} height={356} priority className="h-9 w-auto" />
           </Link>
 
-          <nav className="hidden items-center gap-6 lg:flex">
+          <nav className="ml-auto hidden items-center gap-6 lg:flex">
             <Link href="/" className="border-b-2 border-[color:var(--accent)] pb-0.5 text-sm font-medium text-[color:var(--accent)]">
               Home
             </Link>
@@ -155,24 +125,9 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
             <Link href="/#story" className="text-sm font-medium text-[color:var(--ink)]/80 transition-colors hover:text-[color:var(--accent)]">
               About Us
             </Link>
-            <Link href="/contact" className="text-sm font-medium text-[color:var(--ink)]/80 transition-colors hover:text-[color:var(--accent)]">
-              Contact
-            </Link>
           </nav>
 
-          <form action="/products" method="get" className="hidden max-w-[220px] flex-1 items-center xl:flex">
-            <div className="relative w-full">
-              <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--ink)]/40" />
-              <input
-                type="text"
-                name="q"
-                placeholder="Search sarees, fabrics…"
-                className="w-full rounded-full border border-[color:var(--border)] bg-white py-2 pl-9 pr-3 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--ink)]/40 focus:border-[color:var(--accent)] focus:outline-none"
-              />
-            </div>
-          </form>
-
-          <div className="flex items-center gap-4">
+          <div className="ml-auto flex items-center gap-4 lg:ml-0">
             {user && (
               <>
                 <Link href="/wishlist" aria-label="Wishlist" className="relative text-[color:var(--ink)] hover:text-[color:var(--accent)]">
@@ -214,18 +169,6 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
           </div>
         </div>
 
-        <form action="/products" method="get" className="border-t border-[color:var(--border)] px-5 py-3 lg:hidden">
-          <div className="relative w-full">
-            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--ink)]/40" />
-            <input
-              type="text"
-              name="q"
-              placeholder="Search sarees, fabrics…"
-              className="w-full rounded-full border border-[color:var(--border)] bg-white py-2 pl-9 pr-3 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--ink)]/40 focus:border-[color:var(--accent)] focus:outline-none"
-            />
-          </div>
-        </form>
-
         {open && (
           <nav className="flex flex-col gap-1 border-t border-[color:var(--border)] px-5 py-3 lg:hidden">
             <Link href="/" onClick={() => setOpen(false)} className="py-2 text-sm font-medium uppercase tracking-widest text-[color:var(--ink)]/80">
@@ -258,9 +201,6 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
             </Link>
             <Link href="/#story" onClick={() => setOpen(false)} className="py-2 text-sm font-medium uppercase tracking-widest text-[color:var(--ink)]/80">
               About Us
-            </Link>
-            <Link href="/contact" onClick={() => setOpen(false)} className="py-2 text-sm font-medium uppercase tracking-widest text-[color:var(--ink)]/80">
-              Contact
             </Link>
           </nav>
         )}

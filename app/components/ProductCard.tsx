@@ -27,7 +27,7 @@ export default function ProductCard({ product }: { product: Product }) {
   return (
     <Link
       href={productUrl(product)}
-      className="group block overflow-hidden rounded-xl border border-[color:var(--border)] bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
+      className="group block overflow-hidden bg-white transition-transform duration-300 hover:-translate-y-0.5"
     >
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-[color:var(--cream)]">
         {image?.url ? (
@@ -61,10 +61,10 @@ export default function ProductCard({ product }: { product: Product }) {
           </button>
         )}
       </div>
-      <div className="p-3">
+      <div className="p-3 text-center">
         <h3 className="line-clamp-2 font-serif text-sm leading-snug text-[color:var(--ink)]">{product.name}</h3>
         {price !== undefined && (
-          <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <div className="mt-1.5 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5">
             <p className="text-base font-bold text-[color:var(--ink)]">₹{price.toLocaleString('en-IN')}</p>
             {hasDiscount && (
               <>
@@ -74,6 +74,7 @@ export default function ProductCard({ product }: { product: Product }) {
             )}
           </div>
         )}
+        <p className="mt-1.5 text-xs font-semibold text-[color:var(--accent)]">View Details</p>
       </div>
     </Link>
   );

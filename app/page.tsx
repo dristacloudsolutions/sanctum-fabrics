@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, MessageCircle, Truck, ShieldCheck, RotateCcw, BadgeCheck, Gem, Sparkles, HeartHandshake } from 'lucide-react';
+import { MessageCircle, Truck, ShieldCheck, RotateCcw, BadgeCheck, Gem, Sparkles, HeartHandshake } from 'lucide-react';
 import ProductCard from './components/ProductCard';
 import ProductCarousel from './components/ProductCarousel';
 import Reveal from './components/Reveal';
@@ -18,12 +18,10 @@ const FEATURES = [
   { icon: Truck, label: 'Timely Delivery', sub: 'Pan-India, 4–7 business days' },
 ];
 
-// Grounded in the real description already in config.ts (handloom sarees,
-// natural-dye fabrics, hand block-printed textiles) rather than invented specialities.
 const SPECIALITIES = [
-  { icon: Gem, label: 'Kanjivaram Silks', sub: 'Rich weaves, timeless beauty' },
-  { icon: RotateCcw, label: 'Natural Dyes', sub: 'Earth-toned, chemical-free colour' },
-  { icon: Sparkles, label: 'Block Print Artistry', sub: 'Hand-printed, one motif at a time' },
+  { icon: Gem, label: 'Kanchipuram Silks', sub: 'Royal weaves, timeless beauty' },
+  { icon: RotateCcw, label: 'Kerala Kasavu', sub: 'Pure tradition, elegant grace' },
+  { icon: Sparkles, label: 'Temple Inspiration', sub: 'Heritage designs that inspire' },
   { icon: BadgeCheck, label: 'Handloom Craftsmanship', sub: 'Woven with care, made to last' },
 ];
 
@@ -37,70 +35,51 @@ export default async function Home() {
   const usingSample = liveProducts.length === 0;
   const topCategories = categories.slice(0, 3);
 
-  // Real product photos, not placeholders — falls back to a decorative
-  // treatment only if the catalog genuinely has no images yet.
-  const heroProduct = featured[0];
-  const heroImage = heroProduct?.images?.find((i) => i.is_primary) || heroProduct?.images?.[0];
-  const specialityProduct = products[1] || products[0];
-  const specialityImage = specialityProduct?.images?.find((i) => i.is_primary) || specialityProduct?.images?.[0];
-
   return (
     <div>
       {/* Hero */}
-      <section className="relative overflow-hidden border-b border-[color:var(--border)] bg-[color:var(--cream)]">
-        {/* Decorative motif — abstract, not a stock photo */}
-        <svg
-          className="pointer-events-none absolute -left-24 top-0 h-full w-[420px] text-[color:var(--primary)]/[0.05]"
-          viewBox="0 0 200 400"
-          fill="none"
-          aria-hidden
-        >
-          <path d="M100 0 L160 120 L160 400 L40 400 L40 120 Z" fill="currentColor" />
-          <circle cx="100" cy="60" r="30" fill="currentColor" />
-        </svg>
+      <section className="relative overflow-hidden border-b border-[color:var(--border)]">
+        <div className="relative h-72 w-full sm:h-96 md:aspect-[1898/829] md:h-auto">
+          <Image src="/hero-banner-sanctum.png" alt={config.business.name} fill priority className="object-cover object-right md:object-center" />
+        </div>
 
-        <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-5 py-20 md:grid-cols-2 md:py-28">
-          <Reveal>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--accent)]">
-              Handloom &amp; Artisan Textiles
-            </p>
-            <h1 className="mt-4 font-serif text-4xl leading-tight text-[color:var(--ink)] md:text-5xl">
-              {config.business.tagline}
-            </h1>
-            <p className="mt-5 max-w-md text-base leading-relaxed text-[color:var(--ink)]/70">
-              {config.business.description}
-            </p>
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Link
-                href="/products"
-                className="inline-flex items-center gap-2 rounded-full bg-[color:var(--primary)] px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
-              >
-                Shop the Collection <ArrowRight size={16} />
-              </Link>
-              <a
-                href={buildWhatsAppLink("Hi Sanctum Fabrics, I'd like to know more about your collection.")}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border border-[color:var(--primary)] px-6 py-3 text-sm font-semibold text-[color:var(--primary)] transition-colors hover:bg-[color:var(--primary)] hover:text-white"
-              >
-                <MessageCircle size={16} /> Chat on WhatsApp
-              </a>
-            </div>
-          </Reveal>
-          <Reveal delay={0.15}>
-            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-gradient-to-br from-[color:var(--primary)] to-[#1a2340] shadow-xl">
-              {heroImage?.url ? (
-                <Image src={heroImage.url} alt={heroProduct?.name || 'Sanctum Fabrics'} fill unoptimized priority className="object-cover" />
-              ) : (
-                <div className="flex h-full items-center justify-center px-8 text-center">
-                  <p className="font-serif text-2xl text-[#e8c88a]/90">
-                    Every weave tells
-                    <br />a story
-                  </p>
+        <div className="bg-[color:var(--cream)] px-5 py-10 md:absolute md:inset-0 md:flex md:items-center md:bg-transparent md:p-0">
+          <div className="mx-auto w-full max-w-6xl md:px-5">
+            <Reveal>
+              <div className="mx-auto max-w-md text-center md:mx-0 md:max-w-xl md:text-left">
+                <h1 className="font-serif text-2xl leading-tight text-[color:var(--ink)] sm:text-3xl md:text-5xl">
+                  <span className="block md:whitespace-nowrap">Timeless Elegance,</span>
+                  <span className="block md:whitespace-nowrap"><span className="text-[color:var(--accent)]">Woven</span> with Tradition</span>
+                </h1>
+                <div className="mx-auto my-5 flex items-center gap-3 md:mx-0">
+                  <span className="h-px flex-1 bg-[color:var(--accent)]/40" />
+                  <span className="text-[color:var(--accent)]">&#10048;</span>
+                  <span className="h-px flex-1 bg-[color:var(--accent)]/40" />
                 </div>
-              )}
-            </div>
-          </Reveal>
+                <p className="text-center text-sm leading-relaxed text-[color:var(--ink)]/70 sm:text-base">
+                  Authentic South Indian Sarees, Elegant Churidars
+                  <br />
+                  and Designer Tops curated for every occasion.
+                  <br />
+                  Celebrate tradition. Celebrate you.
+                </p>
+                <div className="mt-8 flex flex-wrap justify-center gap-4">
+                  <Link
+                    href="/products"
+                    className="inline-flex items-center gap-2 bg-[color:var(--accent)] px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+                  >
+                    Shop Sarees
+                  </Link>
+                  <Link
+                    href="/products"
+                    className="inline-flex items-center gap-2 border border-[color:var(--ink)]/30 px-6 py-3 text-sm font-semibold text-[color:var(--ink)] transition-colors hover:bg-[color:var(--ink)] hover:text-white"
+                  >
+                    Explore Collection
+                  </Link>
+                </div>
+              </div>
+            </Reveal>
+          </div>
         </div>
       </section>
 
@@ -108,28 +87,35 @@ export default async function Home() {
       {topCategories.length > 0 && (
         <section className="mx-auto max-w-6xl px-5 py-20">
           <Reveal>
-            <h2 className="mb-2 text-center font-serif text-2xl text-[color:var(--ink)] md:text-3xl">Shop by Category</h2>
-            <div className="mx-auto mb-8 h-0.5 w-12 bg-[color:var(--accent)]" />
+            <h2 className="text-center font-serif text-2xl text-[color:var(--ink)] md:text-3xl">Shop by Category</h2>
+            <div className="mx-auto my-4 flex max-w-[160px] items-center gap-3">
+              <span className="h-px flex-1 bg-[color:var(--accent)]/40" />
+              <span className="text-[color:var(--accent)]">&#10048;</span>
+              <span className="h-px flex-1 bg-[color:var(--accent)]/40" />
+            </div>
           </Reveal>
-          <div className="grid gap-5 md:grid-cols-3">
+          <div className="mt-8 grid gap-5 md:grid-cols-3">
             {topCategories.map((cat, i) => (
               <Reveal key={cat.id} delay={i * 0.1}>
                 <Link
                   href={`/products?category=${cat.id}`}
-                  className="group block overflow-hidden rounded-2xl border border-[color:var(--border)] bg-[color:var(--cream)] transition-shadow hover:shadow-lg"
+                  className="group flex h-full items-stretch overflow-hidden rounded-2xl bg-[color:var(--cream)] transition-shadow hover:shadow-lg"
                 >
-                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-[color:var(--primary)]/10 to-[color:var(--accent)]/10">
+                  <div className="flex flex-1 flex-col justify-center gap-3 p-6">
+                    <p className="font-serif text-xl text-[color:var(--ink)]">{cat.name}</p>
+                    {cat.description && (
+                      <p className="text-xs leading-relaxed text-[color:var(--ink)]/60">{cat.description}</p>
+                    )}
+                    <p className="text-sm font-semibold text-[color:var(--accent)]">Explore {cat.name} →</p>
+                  </div>
+                  <div className="relative w-2/5 shrink-0 overflow-hidden">
                     {cat.image_url ? (
                       <Image src={cat.image_url} alt={cat.name} fill unoptimized className="object-cover transition-transform duration-500 group-hover:scale-105" />
                     ) : (
-                      <div className="flex h-full items-center justify-center font-serif text-3xl text-[color:var(--primary)]/40">
+                      <div className="flex h-full items-center justify-center bg-gradient-to-br from-[color:var(--primary)]/10 to-[color:var(--accent)]/10 font-serif text-3xl text-[color:var(--primary)]/40">
                         {cat.name.slice(0, 1)}
                       </div>
                     )}
-                  </div>
-                  <div className="p-5">
-                    <p className="font-serif text-lg text-[color:var(--ink)]">{cat.name}</p>
-                    <p className="mt-1 text-sm font-semibold text-[color:var(--accent)]">Explore {cat.name} →</p>
                   </div>
                 </Link>
               </Reveal>
@@ -158,8 +144,12 @@ export default async function Home() {
       {/* New Arrivals */}
       <section className="mx-auto max-w-6xl px-5 py-20">
         <Reveal>
-          <h2 className="mb-2 text-center font-serif text-2xl text-[color:var(--ink)] md:text-3xl">New Arrivals</h2>
-          <div className="mx-auto mb-8 h-0.5 w-12 bg-[color:var(--accent)]" />
+          <h2 className="text-center font-serif text-2xl text-[color:var(--ink)] md:text-3xl">New Arrivals</h2>
+          <div className="mx-auto my-4 flex max-w-[160px] items-center gap-3">
+            <span className="h-px flex-1 bg-[color:var(--accent)]/40" />
+            <span className="text-[color:var(--accent)]">&#10048;</span>
+            <span className="h-px flex-1 bg-[color:var(--accent)]/40" />
+          </div>
         </Reveal>
         <Reveal delay={0.1}>
           <ProductCarousel products={newArrivals} />
@@ -167,48 +157,47 @@ export default async function Home() {
       </section>
 
       {/* Specialities & Traditions of South India */}
-      <section id="story" className="border-y border-[color:var(--border)] bg-[color:var(--cream)] scroll-mt-24">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-20 md:grid-cols-2">
-          <Reveal>
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-lg">
-              {specialityImage?.url ? (
-                <Image src={specialityImage.url} alt={specialityProduct?.name || 'Sanctum Fabrics'} fill unoptimized className="object-cover" />
-              ) : (
-                <div className="h-full w-full bg-gradient-to-br from-[color:var(--primary)] to-[#1a2340]" />
-              )}
-            </div>
-          </Reveal>
+      <section id="story" className="relative overflow-hidden border-y border-[color:var(--border)] scroll-mt-24">
+        <div className="relative h-64 w-full sm:h-80 md:h-[380px]">
+          <Image src="/traditions.png" alt="Specialities & Traditions of South India" fill className="object-cover object-left md:object-center" />
+        </div>
 
-          <Reveal delay={0.15}>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--accent)]">Our Story</p>
-            <h2 className="mt-3 font-serif text-2xl text-[color:var(--ink)] md:text-3xl">
-              The Specialities &amp; Traditions of <span className="text-[color:var(--accent)]">South India</span>
-            </h2>
+        <div className="bg-[color:var(--cream)] px-5 py-10 md:absolute md:inset-0 md:flex md:items-center md:bg-transparent md:p-0">
+          <div className="w-full md:px-5 lg:px-12">
+            <Reveal delay={0.15}>
+              <div className="mx-auto max-w-xl md:ml-auto md:mr-0">
+                <h2 className="text-center font-serif text-2xl leading-tight text-[color:var(--ink)] sm:text-3xl md:text-left md:text-4xl">
+                  The Specialities &amp; Traditions of <span className="text-[color:var(--accent)]">South India</span>
+                </h2>
 
-            <div className="mt-6 grid grid-cols-2 gap-5">
-              {SPECIALITIES.map(({ icon: Icon, label, sub }) => (
-                <div key={label}>
-                  <Icon size={20} className="text-[color:var(--accent)]" />
-                  <p className="mt-2 text-sm font-semibold text-[color:var(--ink)]">{label}</p>
-                  <p className="mt-0.5 text-xs leading-snug text-[color:var(--ink)]/50">{sub}</p>
+                <div className="mt-6 grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:gap-y-0 sm:divide-x sm:divide-[color:var(--border)]">
+                  {SPECIALITIES.map(({ icon: Icon, label, sub }) => (
+                    <div key={label} className="px-3 text-center sm:first:pl-0 sm:last:pr-0">
+                      <Icon size={24} className="mx-auto text-[color:var(--accent)]" />
+                      <p className="mt-2.5 text-sm font-semibold leading-tight text-[color:var(--ink)]">{label}</p>
+                      <p className="mt-1 text-xs leading-snug text-[color:var(--ink)]/50">{sub}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
 
-            <p className="mt-6 leading-relaxed text-[color:var(--ink)]/70">
-              Rooted deeply in South Indian tradition, Sanctum is a celebration of heritage, grace, and timeless
-              ethnic beauty — sourced directly from artisan clusters and woven with intention.
-            </p>
+                <p className="mt-6 text-center text-base leading-relaxed text-[color:var(--ink)]/70 md:mt-3 md:text-left">
+                  Our collections celebrate the rich heritage, vibrant colors and intricate craftsmanship of South
+                  India. Every piece is a blend of tradition, quality and contemporary style.
+                </p>
 
-            <a
-              href={buildWhatsAppLink("Hi Sanctum Fabrics, I'd like to place an order.")}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-6 inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
-            >
-              <MessageCircle size={16} /> Order on WhatsApp
-            </a>
-          </Reveal>
+                <div className="mt-6 flex justify-center md:mt-3 md:justify-start">
+                  <a
+                    href={buildWhatsAppLink("Hi Sanctum Fabrics, I'd like to place an order.")}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+                  >
+                    <MessageCircle size={16} /> Order on WhatsApp
+                  </a>
+                </div>
+              </div>
+            </Reveal>
+          </div>
         </div>
       </section>
 
@@ -241,7 +230,7 @@ export default async function Home() {
       {/* WhatsApp signup banner */}
       <section className="border-t border-[color:var(--border)] bg-[color:var(--primary)]">
         <Reveal>
-          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-5 py-12 text-center md:flex-row md:text-left">
+          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-5 py-6 text-center md:flex-row md:text-left">
             <div>
               <h2 className="font-serif text-2xl text-white">Get first access to new arrivals</h2>
               <p className="mt-2 max-w-md text-sm text-white/70">

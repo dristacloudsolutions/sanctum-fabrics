@@ -17,10 +17,10 @@ export const config = {
       'Sanctum Fabrics curates handloom sarees, natural-dye fabrics, and hand block-printed textiles — sourced directly from artisan clusters across India.',
 
     contact: {
-      email: 'hello@sanctumfabrics.in', // TODO: confirm real inbox
-      phone: '+91 90000 00000', // TODO: real phone number
-      whatsApp: '+91 90000 00000', // TODO: real WhatsApp number
-      address: 'Sanctum Fabrics Studio,\nIndia', // TODO: real address
+      email: 'sanctumavemaria@gmail.com',
+      phone: '+91 99208 22231',
+      whatsApp: '+91 99208 22231',
+      address: 'Sanctum Fabrics,\nIndia',
     },
 
     social: {
