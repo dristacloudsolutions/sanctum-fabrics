@@ -83,9 +83,24 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* New Arrivals */}
+      <section className="mx-auto max-w-6xl px-5 pb-10 pt-10">
+        <Reveal>
+          <h2 className="text-center font-serif text-2xl text-[color:var(--ink)] md:text-3xl">New Arrivals</h2>
+          <div className="mx-auto my-4 flex max-w-[160px] items-center gap-3">
+            <span className="h-px flex-1 bg-[color:var(--accent)]/40" />
+            <span className="text-[color:var(--accent)]">&#10048;</span>
+            <span className="h-px flex-1 bg-[color:var(--accent)]/40" />
+          </div>
+        </Reveal>
+        <Reveal delay={0.1}>
+          <ProductCarousel products={newArrivals} />
+        </Reveal>
+      </section>
+
       {/* Shop by category */}
       {topCategories.length > 0 && (
-        <section className="mx-auto max-w-6xl px-5 py-20">
+        <section className="mx-auto max-w-6xl px-5 pb-20 pt-10">
           <Reveal>
             <h2 className="text-center font-serif text-2xl text-[color:var(--ink)] md:text-3xl">Shop by Category</h2>
             <div className="mx-auto my-4 flex max-w-[160px] items-center gap-3">
@@ -141,21 +156,6 @@ export default async function Home() {
             </Reveal>
           ))}
         </div>
-      </section>
-
-      {/* New Arrivals */}
-      <section className="mx-auto max-w-6xl px-5 py-20">
-        <Reveal>
-          <h2 className="text-center font-serif text-2xl text-[color:var(--ink)] md:text-3xl">New Arrivals</h2>
-          <div className="mx-auto my-4 flex max-w-[160px] items-center gap-3">
-            <span className="h-px flex-1 bg-[color:var(--accent)]/40" />
-            <span className="text-[color:var(--accent)]">&#10048;</span>
-            <span className="h-px flex-1 bg-[color:var(--accent)]/40" />
-          </div>
-        </Reveal>
-        <Reveal delay={0.1}>
-          <ProductCarousel products={newArrivals} />
-        </Reveal>
       </section>
 
       {/* Specialities & Traditions of South India */}

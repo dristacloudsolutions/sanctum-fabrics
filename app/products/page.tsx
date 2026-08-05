@@ -3,7 +3,6 @@ import { SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { getProducts, getCategoryHierarchy, buildAttributeFacets, type Product } from '@/lib/dristaService';
 import { sampleProducts } from '@/lib/sampleProducts';
-import config from '../config/config';
 
 export const metadata = {
   title: 'Catalog | Sanctum Fabrics',
@@ -91,20 +90,13 @@ export default async function ProductsPage({
     products = [...products].sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  const selectedCategory = params.category
-    ? categories.flatMap((cat) => [cat, ...(cat.children || [])]).find((cat) => cat.id === params.category)
-    : undefined;
-  const heading = selectedCategory?.name || 'The Catalog';
-
   const paramsAsRecord = params as Record<string, string | string[] | undefined>;
   const isAttrChecked = (key: string, value: string) => toValueList(paramsAsRecord[`attr_${key}`]).includes(value);
 
   return (
     <div className="mx-auto max-w-7xl px-5 pb-16 pt-8">
       <div className="mb-8">
-        <h1 className="font-serif text-3xl text-[color:var(--ink)] md:text-4xl">{heading}</h1>
-        <p className="mt-2 font-serif text-base italic text-[color:var(--accent)]">{config.business.tagline}</p>
-        <p className="mt-2 text-sm text-[color:var(--ink)]/60">
+        <p className="text-sm text-[color:var(--ink)]/60">
           {products.length} piece{products.length === 1 ? '' : 's'} available
         </p>
         {usingSample && (
@@ -114,7 +106,7 @@ export default async function ProductsPage({
         )}
       </div>
 
-      <form method="get" className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_1fr]">
+      <form method="get" className="grid grid-cols-1 gap-8 lg:grid-cols-[200px_1fr]">
         {/* Mobile-only drawer toggle — CSS-only (peer checkbox), no client JS
             needed since the rest of this form is a plain server-rendered GET. */}
         <input type="checkbox" id="mobile-filters" className="peer hidden" />
@@ -158,7 +150,7 @@ export default async function ProductsPage({
             </div>
 
             {/* Sort by */}
-            <details className="group py-4" open>
+            <details className="group py-4">
               <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-[color:var(--ink)]">
                 Sort by
                 <FacetToggleIcon />
@@ -174,7 +166,7 @@ export default async function ProductsPage({
             </details>
 
             {/* Price */}
-            <details className="group py-4" open>
+            <details className="group py-4">
               <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-[color:var(--ink)]">
                 Price
                 <FacetToggleIcon />

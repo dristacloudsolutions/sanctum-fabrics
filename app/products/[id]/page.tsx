@@ -1,12 +1,13 @@
 import Image from 'next/image';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, MessageCircle } from 'lucide-react';
-import { getProduct } from '@/lib/dristaService';
+import { MessageCircle } from 'lucide-react';
+import { getProduct, getProducts } from '@/lib/dristaService';
 import { sampleProducts } from '@/lib/sampleProducts';
 import { buildWhatsAppLink, productOrderMessage } from '@/lib/whatsapp';
 import { formatINR } from '@/lib/format';
 import ProductDetailInteractive from './ProductDetailInteractive';
+import ProductCarousel from '@/app/components/ProductCarousel';
+import Reveal from '@/app/components/Reveal';
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -16,16 +17,31 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
   if (!product) notFound();
 
-  return (
-    <div className="mx-auto max-w-6xl px-5 py-16">
-      <Link href="/products" className="mb-8 inline-flex items-center gap-2 text-sm text-[color:var(--ink)]/60 hover:text-[color:var(--ink)]">
-        <ArrowLeft size={15} /> Back to catalog
-      </Link>
+  const allProducts = liveProduct ? await getProducts() : sampleProducts;
+  const similarProducts = allProducts.filter((p) => p.id !== product.id).slice(0, 8);
 
+  return (
+    <div className="mx-auto max-w-6xl px-5 pb-16 pt-6">
       {liveProduct ? (
         <ProductDetailInteractive product={liveProduct} />
       ) : (
         <SampleProductDetail product={product} />
+      )}
+
+      {similarProducts.length > 0 && (
+        <section className="mt-16 border-t border-[color:var(--border)] pt-12">
+          <Reveal>
+            <h2 className="text-center font-serif text-2xl text-[color:var(--ink)] md:text-3xl">You May Also Like</h2>
+            <div className="mx-auto my-4 flex max-w-[160px] items-center gap-3">
+              <span className="h-px flex-1 bg-[color:var(--accent)]/40" />
+              <span className="text-[color:var(--accent)]">&#10048;</span>
+              <span className="h-px flex-1 bg-[color:var(--accent)]/40" />
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <ProductCarousel products={similarProducts} />
+          </Reveal>
+        </section>
       )}
     </div>
   );
