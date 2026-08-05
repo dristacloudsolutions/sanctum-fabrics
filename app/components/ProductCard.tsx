@@ -56,7 +56,7 @@ export default function ProductCard({ product }: { product: Product }) {
           <Image src="/sanctum_logo_card.jpg" alt="" fill unoptimized className="object-cover" />
         </span>
         <span className="font-serif text-[11px] uppercase tracking-[0.15em] text-[color:var(--ink)]/70">
-          Sanctum Fabrics
+          Sanctum Collections
         </span>
       </div>
 
