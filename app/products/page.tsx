@@ -279,9 +279,11 @@ export default async function ProductsPage({
               {hasFilters ? 'No pieces match your filters — try adjusting them.' : 'No products available right now — check back soon.'}
             </p>
           ) : (
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+            <div className="flex flex-wrap gap-4">
               {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <div key={product.id} className="w-[180px] sm:w-[210px] lg:w-[240px]">
+                  <ProductCard product={product} />
+                </div>
               ))}
             </div>
           )}
