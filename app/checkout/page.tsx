@@ -4,121 +4,19 @@ import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Script from 'next/script';
-import { X, ShoppingBag } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useCart } from '@/app/contexts/CartContext';
 import { ShippingOption } from '@/lib/dristaService';
 import { formatINR } from '@/lib/format';
 import { INDIAN_STATES, COUNTRIES } from '@/lib/addressData';
 import AddressBook from './AddressBook';
+import AuthModal from '@/app/components/AuthModal';
 
 declare global {
   interface Window {
     Razorpay: any;
   }
-}
-
-function AuthPanel({ onClose }: { onClose?: () => void }) {
-  const { login, register } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [identifier, setIdentifier] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [form, setForm] = useState({ first_name: '', last_name: '', phone: '', email: '', password: '' });
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
-    try {
-      if (mode === 'login') {
-        await login(identifier, loginPassword);
-      } else {
-        await register(form);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const inputCls = 'w-full rounded-lg border border-[color:var(--border)] bg-white px-4 py-2.5 text-sm outline-none focus:border-[color:var(--accent)]';
-
-  return (
-    <div className="relative mx-auto w-full max-w-sm rounded-2xl border border-[color:var(--border)] bg-white p-6 shadow-xl">
-      {onClose && (
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute right-4 top-4 text-[color:var(--ink)]/40 hover:text-[color:var(--ink)]"
-        >
-          <X size={18} />
-        </button>
-      )}
-
-      <p className="mb-4 text-sm text-[color:var(--ink)]/60">Sign in to save your address and complete your order.</p>
-
-      <div className="mb-5 flex gap-4 border-b border-[color:var(--border)]">
-        {(['login', 'register'] as const).map((m) => (
-          <button
-            key={m}
-            onClick={() => setMode(m)}
-            className={`pb-3 text-sm font-semibold uppercase tracking-wide ${
-              mode === m ? 'border-b-2 border-[color:var(--accent)] text-[color:var(--ink)]' : 'text-[color:var(--ink)]/40'
-            }`}
-          >
-            {m === 'login' ? 'Sign In' : 'Create Account'}
-          </button>
-        ))}
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-3">
-        {mode === 'login' ? (
-          <>
-            <input required placeholder="Phone or email" value={identifier} onChange={(e) => setIdentifier(e.target.value)} className={inputCls} />
-            <input required type="password" placeholder="Password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className={inputCls} />
-          </>
-        ) : (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <input required placeholder="First name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className={inputCls} />
-              <input required placeholder="Last name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className={inputCls} />
-            </div>
-            <input required type="tel" placeholder="Phone number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} />
-            <input type="email" placeholder="Email (optional)" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} />
-            <input required type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={inputCls} />
-          </>
-        )}
-
-        {error && <p className="text-sm text-red-500">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded-full bg-[color:var(--primary)] px-6 py-3 text-sm font-semibold text-white hover:-translate-y-0.5 transition-transform disabled:opacity-60"
-        >
-          {submitting ? 'Please wait…' : mode === 'login' ? 'Sign In' : 'Create Account & Continue'}
-        </button>
-      </form>
-    </div>
-  );
-}
-
-// Keeps the order summary visible behind a dimmed backdrop while signing in —
-// checkout is the one place a guest actually needs an account, so this makes
-// that requirement feel like a deliberate step in the flow rather than a
-// dead-end page swap that loses all context of what they were buying.
-function AuthModal({ onClose }: { onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()}>
-        <AuthPanel onClose={onClose} />
-      </div>
-    </div>
-  );
 }
 
 function CheckoutForm() {
@@ -128,11 +26,18 @@ function CheckoutForm() {
   const searchParams = useSearchParams();
   const couponFromCart = searchParams.get('coupon') || '';
 
-  const [authModalOpen, setAuthModalOpen] = useState(!user);
+  // Guest checkout: no longer forced open on mount — signing in is now an
+  // optional shortcut (pre-fills saved addresses/phone), not a gate.
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [step, setStep] = useState<'details' | 'payment'>('details');
   const [address, setAddress] = useState({ line1: '', line2: '', city: '', state: '', pincode: '', country: 'India' });
   const [phone, setPhone] = useState(user?.phone || '');
   const [gstin, setGstin] = useState('');
+  // Guest-only contact fields — collected here since there's no account to pull
+  // them from. `guestPhone` reuses the same `phone` state as logged-in users
+  // (still the delivery contact either way); name/email are guest-specific.
+  const [guestName, setGuestName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod'>('online');
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -212,6 +117,13 @@ function CheckoutForm() {
           shipping_option_id: selectedOptionId || undefined,
           gstin: gstin.trim() || undefined,
           payment_method: paymentMethod,
+          // Only meaningful (and only sent) for guest checkout — the backend
+          // identifies logged-in customers from the session token instead.
+          ...(!user && {
+            guest_name: guestName.trim(),
+            guest_email: guestEmail.trim() || undefined,
+            guest_phone: phone.trim(),
+          }),
         }),
       });
       const checkoutPayload = await checkoutRes.json();
@@ -254,7 +166,11 @@ function CheckoutForm() {
         order_id: payment.razorpay_order_id,
         name: 'Sanctum',
         description: `Order ${order.so_number}`,
-        prefill: { name: `${user?.first_name || ''} ${user?.last_name || ''}`.trim(), email: user?.email, contact: user?.phone },
+        prefill: {
+          name: user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : guestName,
+          email: user?.email || guestEmail || undefined,
+          contact: user?.phone || phone,
+        },
         handler: async (response: any) => {
           try {
             const verifyRes = await fetch('/api/payment/verify', {
@@ -306,45 +222,6 @@ function CheckoutForm() {
 
   const inputCls = 'w-full rounded-lg border border-[color:var(--border)] bg-white px-4 py-2.5 text-sm outline-none focus:border-[color:var(--accent)]';
 
-  if (!user) {
-    return (
-      <div className="grid gap-10 md:grid-cols-2">
-        {authModalOpen && <AuthModal onClose={() => setAuthModalOpen(false)} />}
-
-        <div className="rounded-2xl border border-[color:var(--border)] bg-white p-6 text-center">
-          <h2 className="font-serif text-xl text-[color:var(--ink)]">Sign in to continue</h2>
-          <p className="mt-2 text-sm text-[color:var(--ink)]/60">
-            Your {items.length} item{items.length > 1 ? 's' : ''} {items.length > 1 ? 'are' : 'is'} saved — sign in or create an account to enter your delivery address and complete your order.
-          </p>
-          <button
-            type="button"
-            onClick={() => setAuthModalOpen(true)}
-            className="mt-5 rounded-full bg-[color:var(--primary)] px-6 py-3 text-sm font-semibold text-white hover:-translate-y-0.5 transition-transform"
-          >
-            Sign In to Continue
-          </button>
-        </div>
-
-        <div className="rounded-2xl border border-[color:var(--border)] bg-white p-6">
-          <h2 className="font-serif text-xl text-[color:var(--ink)]">Order Summary</h2>
-          <div className="mt-4 space-y-2 text-sm">
-            {items.map((item) => (
-              <div key={item.id} className="flex justify-between text-[color:var(--ink)]/70">
-                <span>{item.item?.name} × {item.quantity}</span>
-                <span>₹{formatINR(item.quantity * (item.variant?.selling_price ?? item.item?.selling_price ?? 0))}</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex justify-between border-t border-[color:var(--border)] pt-3 text-base font-semibold text-[color:var(--ink)]">
-            <span>Subtotal</span>
-            <span>₹{formatINR(subtotal)}</span>
-          </div>
-          <p className="mt-1 text-xs text-[color:var(--ink)]/40">Shipping and GST calculated after sign-in.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="grid gap-10 md:grid-cols-2">
       <Script src="https://checkout.razorpay.com/v1/checkout.js" onLoad={() => setScriptReady(true)} />
@@ -356,17 +233,40 @@ function CheckoutForm() {
           <span className={step === 'payment' ? 'text-[color:var(--accent)]' : ''}>2. Payment</span>
         </div>
 
+        {authModalOpen && (
+          <AuthModal onClose={() => setAuthModalOpen(false)} subtitle="Sign in to save your address and complete your order." />
+        )}
+
         {step === 'details' && (
           <form onSubmit={handleContinueToPayment} className="space-y-3">
-            <AddressBook
-              onSelect={(details) => {
-                setAddress({
-                  line1: details.line1, line2: details.line2 || '', city: details.city,
-                  state: details.state, pincode: details.pincode, country: details.country || 'India',
-                });
-                if (details.phone) setPhone(details.phone);
-              }}
-            />
+            {!user && (
+              <div className="flex items-center justify-between rounded-lg border border-[color:var(--border)] bg-[color:var(--cream)] px-4 py-2.5 text-sm">
+                <span className="text-[color:var(--ink)]/60">Have an account?</span>
+                <button type="button" onClick={() => setAuthModalOpen(true)} className="font-semibold text-[color:var(--accent)] hover:underline">
+                  Sign in to save this address
+                </button>
+              </div>
+            )}
+
+            {user && (
+              <AddressBook
+                onSelect={(details) => {
+                  setAddress({
+                    line1: details.line1, line2: details.line2 || '', city: details.city,
+                    state: details.state, pincode: details.pincode, country: details.country || 'India',
+                  });
+                  if (details.phone) setPhone(details.phone);
+                }}
+              />
+            )}
+
+            {!user && (
+              <>
+                <h2 className="font-serif text-xl text-[color:var(--ink)]">Contact Details</h2>
+                <input required placeholder="Full name" value={guestName} onChange={(e) => setGuestName(e.target.value)} className={inputCls} />
+                <input type="email" placeholder="Email (optional, for your order confirmation)" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} className={inputCls} />
+              </>
+            )}
 
             <h2 className="font-serif text-xl text-[color:var(--ink)]">
               {user ? 'Or Enter a New Address' : 'Shipping Address'}

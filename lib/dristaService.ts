@@ -520,8 +520,14 @@ export async function validateCoupon(cartId: string, code: string, token?: strin
 
 export async function checkout(
   cartId: string,
-  data: { shipping_address: Record<string, unknown>; coupon_code?: string; shipping_option_id?: string; gstin?: string; payment_method?: 'online' | 'cod' },
-  token: string
+  data: {
+    shipping_address: Record<string, unknown>; coupon_code?: string; shipping_option_id?: string;
+    gstin?: string; payment_method?: 'online' | 'cod';
+    // Guest checkout only — ignored by the backend when a token identifies a
+    // logged-in customer instead.
+    guest_name?: string; guest_email?: string; guest_phone?: string;
+  },
+  token?: string
 ): Promise<SalesOrder> {
   const payload = await dristaAction('/v1/ecommerce/checkout', {
     method: 'POST',
@@ -531,7 +537,7 @@ export async function checkout(
   return payload.data as SalesOrder;
 }
 
-export async function initiatePayment(orderId: string, token: string): Promise<{
+export async function initiatePayment(orderId: string, token?: string): Promise<{
   order_id: string; razorpay_order_id: string; amount: number; currency: string; key_id: string;
 }> {
   const payload = await dristaAction('/v1/ecommerce/payment/initiate', {
@@ -544,7 +550,7 @@ export async function initiatePayment(orderId: string, token: string): Promise<{
 
 export async function verifyPayment(
   data: { orderId: string; razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string },
-  token: string
+  token?: string
 ): Promise<SalesOrder> {
   const payload = await dristaAction('/v1/ecommerce/payment/verify', {
     method: 'POST',

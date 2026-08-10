@@ -18,7 +18,18 @@ const emptyDraft = (): AddressDetails & { address_type: string } => ({
 // Saved-address picker for checkout — lets a signed-in customer reuse a
 // previously saved address (with a Home/Work/Other label) or add a new one,
 // optionally picked straight off a map instead of typed by hand.
-export default function AddressBook({ onSelect }: { onSelect: (details: AddressDetails) => void }) {
+//
+// Also reused standalone on the "My Addresses" account page (see
+// app/addresses/page.tsx) — `onSelect` is optional there since that page is
+// pure management (add/remove), not picking an address for an in-progress
+// order, and `heading` swaps the checkout-specific copy for that context.
+export default function AddressBook({
+  onSelect,
+  heading = 'Choose a Delivery Address',
+}: {
+  onSelect?: (details: AddressDetails) => void;
+  heading?: string;
+}) {
   const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -38,7 +49,7 @@ export default function AddressBook({ onSelect }: { onSelect: (details: AddressD
         const preferred = list.find((a) => a.is_default) || list[0];
         if (preferred) {
           setSelectedId(preferred.id);
-          onSelect(preferred.details);
+          onSelect?.(preferred.details);
         }
       })
       .catch(() => {})
@@ -51,7 +62,7 @@ export default function AddressBook({ onSelect }: { onSelect: (details: AddressD
   const selectAddress = (addr: CustomerAddress) => {
     setSelectedId(addr.id);
     setShowForm(false);
-    onSelect(addr.details);
+    onSelect?.(addr.details);
   };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
@@ -95,7 +106,7 @@ export default function AddressBook({ onSelect }: { onSelect: (details: AddressD
     <div className="space-y-3">
       {addresses.length > 0 && (
         <>
-          <h2 className="font-serif text-xl text-[color:var(--ink)]">Choose a Delivery Address</h2>
+          <h2 className="font-serif text-xl text-[color:var(--ink)]">{heading}</h2>
           <div className="grid gap-2.5 sm:grid-cols-2">
             {addresses.map((addr) => {
               const Icon = TYPE_ICON[addr.address_type] || MapPin;

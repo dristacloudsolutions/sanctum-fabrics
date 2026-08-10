@@ -11,6 +11,7 @@ import { useAuth } from '@/app/contexts/AuthContext';
 import { useWishlist } from '@/app/contexts/WishlistContext';
 import { buildWhatsAppLink } from '@/lib/whatsapp';
 import type { CategoryGroup } from '@/lib/dristaService';
+import AuthModal from './AuthModal';
 
 // lucide-react dropped brand icons — inline SVGs, shared shape with Footer.
 function InstagramIcon({ size = 14 }: { size?: number }) {
@@ -41,6 +42,7 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
   const [open, setOpen] = useState(false);
   const [collectionsOpen, setCollectionsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const { itemCount } = useCart();
   const { user, logout } = useAuth();
   const { itemIds: wishlistIds } = useWishlist();
@@ -74,6 +76,8 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur">
+      {authModalOpen && <AuthModal onClose={() => setAuthModalOpen(false)} />}
+
       {/* Welcome / social top bar */}
       <div className="hidden bg-[color:var(--ink)] px-5 py-2 text-white sm:block">
         <div className="mx-auto flex max-w-6xl items-center justify-between text-xs">
@@ -170,12 +174,22 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
             </Link>
 
             {!user && (
-              <Link
-                href="/products"
-                className="hidden shrink-0 rounded-full bg-[color:var(--accent)] px-5 py-2 text-xs font-semibold uppercase tracking-widest text-white transition-transform hover:-translate-y-0.5 sm:inline-block"
-              >
-                Shop Now
-              </Link>
+              <>
+                <Link
+                  href="/products"
+                  className="hidden shrink-0 rounded-full bg-[color:var(--accent)] px-5 py-2 text-xs font-semibold uppercase tracking-widest text-white transition-transform hover:-translate-y-0.5 sm:inline-block"
+                >
+                  Shop Now
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setAuthModalOpen(true)}
+                  aria-label="Sign in"
+                  className="text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+                >
+                  <User size={20} />
+                </button>
+              </>
             )}
 
             {user && (
@@ -201,6 +215,13 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
                         className="block rounded-lg px-3 py-2 text-sm text-[color:var(--ink)]/80 hover:bg-[color:var(--cream)] hover:text-[color:var(--accent)]"
                       >
                         My Orders
+                      </Link>
+                      <Link
+                        href="/addresses"
+                        onClick={() => setProfileOpen(false)}
+                        className="block rounded-lg px-3 py-2 text-sm text-[color:var(--ink)]/80 hover:bg-[color:var(--cream)] hover:text-[color:var(--accent)]"
+                      >
+                        My Addresses
                       </Link>
                       <button
                         onClick={() => { setProfileOpen(false); logout(); }}

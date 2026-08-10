@@ -93,7 +93,11 @@ export default function ProductGallery({
             <Image src={overrideImageUrl} alt={productName} fill unoptimized className="object-cover" />
           </div>
         ) : (
-          <MobileCarousel images={images} productName={productName} activeIndex={activeIndex} onIndexChange={setActiveIndex} onOpenLightbox={() => setLightboxOpen(true)} />
+          <MobileImageGrid
+            images={images}
+            productName={productName}
+            onOpenLightbox={(i) => { setActiveIndex(i); setLightboxOpen(true); }}
+          />
         )}
       </div>
 
@@ -239,77 +243,32 @@ export default function ProductGallery({
   );
 }
 
-function MobileCarousel({
+// Static 2-column grid showing every product photo at once, instead of a
+// one-at-a-time swipe carousel — the shopper sees the full set on scroll
+// without having to swipe through each one, and taps any tile to open the
+// same full-screen lightbox (already index-aware) at that photo.
+function MobileImageGrid({
   images,
   productName,
-  activeIndex,
-  onIndexChange,
   onOpenLightbox,
 }: {
   images: ProductImage[];
   productName: string;
-  activeIndex: number;
-  onIndexChange: (i: number) => void;
-  onOpenLightbox: () => void;
+  onOpenLightbox: (index: number) => void;
 }) {
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  const isProgrammaticScroll = useRef(false);
-
-  // Keeps the dot indicator in sync with whatever slide the user actually
-  // swiped to — driven by scroll position rather than a swipe-gesture
-  // library, so it works with native momentum scrolling and scroll-snap.
-  const handleScroll = () => {
-    if (isProgrammaticScroll.current) return;
-    const el = scrollerRef.current;
-    if (!el) return;
-    const index = Math.round(el.scrollLeft / el.clientWidth);
-    if (index !== activeIndex) onIndexChange(index);
-  };
-
-  const scrollToIndex = (i: number) => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    isProgrammaticScroll.current = true;
-    el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' });
-    onIndexChange(i);
-    window.setTimeout(() => { isProgrammaticScroll.current = false; }, 400);
-  };
-
   return (
-    <div>
-      <div
-        ref={scrollerRef}
-        onScroll={handleScroll}
-        className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {images.map((img, i) => (
-          <button
-            key={img.url || i}
-            type="button"
-            onClick={onOpenLightbox}
-            className="relative aspect-[4/5] w-full shrink-0 snap-center overflow-hidden bg-[color:var(--cream)]"
-            aria-label={`View image ${i + 1} of ${images.length}`}
-          >
-            {img.url && <Image src={img.url} alt={img.alt_text || productName} fill unoptimized className="object-cover" />}
-          </button>
-        ))}
-      </div>
-
-      {images.length > 1 && (
-        <div className="mt-3 flex justify-center gap-1.5">
-          {images.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => scrollToIndex(i)}
-              aria-label={`Go to image ${i + 1}`}
-              className={`h-1.5 rounded-full transition-all ${
-                i === activeIndex ? 'w-5 bg-[color:var(--accent)]' : 'w-1.5 bg-[color:var(--ink)]/20'
-              }`}
-            />
-          ))}
-        </div>
-      )}
+    <div className="grid grid-cols-2 gap-1 overflow-hidden rounded-2xl">
+      {images.map((img, i) => (
+        <button
+          key={img.url || i}
+          type="button"
+          onClick={() => onOpenLightbox(i)}
+          className="relative aspect-[3/4] w-full overflow-hidden bg-[color:var(--cream)]"
+          aria-label={`View image ${i + 1} of ${images.length}`}
+        >
+          {img.url && <Image src={img.url} alt={img.alt_text || productName} fill unoptimized className="object-cover" />}
+        </button>
+      ))}
     </div>
   );
 }

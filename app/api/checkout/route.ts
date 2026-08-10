@@ -6,8 +6,12 @@ import { resolveCart } from '@/lib/cart-helpers';
 
 export async function POST(req: NextRequest) {
   try {
+    // Guest checkout is allowed — token is undefined for a signed-out visitor,
+    // and every downstream call here already accepts that (dristaAction only
+    // attaches an Authorization header when a token is actually present; the
+    // backend resolves the customer from guest_name/guest_email/guest_phone
+    // in the request body instead).
     const token = await getToken();
-    if (!token) return NextResponse.json({ error: 'Please sign in to check out' }, { status: 401 });
 
     // resolveCart self-heals a missing/stale sanctum_cart_id cookie (e.g. left
     // over from before a tenant/backend switch, or a cart that's since expired)

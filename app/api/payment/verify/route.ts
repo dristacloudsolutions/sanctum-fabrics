@@ -4,8 +4,9 @@ import { getToken } from '@/lib/session';
 
 export async function POST(req: NextRequest) {
   try {
+    // Guest checkout is allowed — see /api/payment/initiate for why this needs
+    // no session.
     const token = await getToken();
-    if (!token) return NextResponse.json({ error: 'Please sign in' }, { status: 401 });
 
     const body = await req.json();
     const order = await verifyPayment(body, token);
