@@ -35,6 +35,9 @@ export const metadata: Metadata = {
     description: config.seo.description,
     type: "website",
   },
+  other: {
+    "facebook-domain-verification": "ble67nxh8gyeh8u5zx5j4txrps3ai9",
+  },
 };
 
 export default async function RootLayout({
