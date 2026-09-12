@@ -13,7 +13,7 @@ export default function ProductDetailInteractive({ product }: { product: Product
 
   return (
     <div className="grid gap-10 md:grid-cols-2">
-      <ProductGallery images={product.images || []} productName={product.name} overrideImageUrl={variantImageUrl} />
+      <ProductGallery images={product.images || []} videos={product.videos || []} productName={product.name} overrideImageUrl={variantImageUrl} />
 
       <div>
         {(product.sku || product.item_code) && (

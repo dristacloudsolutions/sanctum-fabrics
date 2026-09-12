@@ -89,7 +89,10 @@ export default function AddToCartPanel({
   const discountPct = hasDiscount ? Math.round(((mrp! - price!) / mrp!) * 100) : 0;
   const stock = matchedVariant ? matchedVariant.current_stock : product.current_stock;
   const outOfStock = product.maintain_stock !== false && stock !== undefined && stock <= 0;
-  const canAdd = !needsSelection && !outOfStock;
+  // Pre-order is a product-level flag (no per-variant override in the catalog) —
+  // an out-of-stock item still lets the shopper order it, fulfilled on restock.
+  const isPreorder = outOfStock && !!product.preorder_enabled;
+  const canAdd = !needsSelection && (!outOfStock || isPreorder);
 
   const handleAdd = async () => {
     setError(null);
@@ -190,7 +193,11 @@ export default function AddToCartPanel({
             +
           </button>
         </div>
-        {outOfStock && <span className="text-xs font-semibold uppercase tracking-wide text-red-500">Out of stock</span>}
+        {outOfStock && (
+          <span className={`text-xs font-semibold uppercase tracking-wide ${isPreorder ? 'text-indigo-500' : 'text-red-500'}`}>
+            {isPreorder ? 'Available for pre-order' : 'Out of stock'}
+          </span>
+        )}
       </div>
 
       {needsSelection && !error && (
@@ -207,7 +214,7 @@ export default function AddToCartPanel({
           className="inline-flex items-center gap-2 rounded-full bg-[color:var(--primary)] px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {added || alreadyInCart ? <Check size={16} /> : <ShoppingBag size={16} />}
-          {added ? 'Added to cart' : submitting ? 'Adding…' : alreadyInCart ? 'Added in Cart' : 'Add to Cart'}
+          {added ? (isPreorder ? 'Pre-order placed' : 'Added to cart') : submitting ? 'Adding…' : alreadyInCart ? 'Added in Cart' : isPreorder ? 'Pre-order Now' : 'Add to Cart'}
         </button>
 
         <button
@@ -257,7 +264,7 @@ export default function AddToCartPanel({
           className="ml-auto flex flex-1 items-center justify-center gap-2 rounded-full bg-[color:var(--primary)] px-6 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           {added || alreadyInCart ? <Check size={16} /> : <ShoppingBag size={16} />}
-          {added ? 'Added' : submitting ? 'Adding…' : outOfStock ? 'Out of stock' : needsSelection ? 'Select options' : alreadyInCart ? 'Added in Cart' : 'Add to Cart'}
+          {added ? 'Added' : submitting ? 'Adding…' : outOfStock && !isPreorder ? 'Out of stock' : needsSelection ? 'Select options' : alreadyInCart ? 'Added in Cart' : isPreorder ? 'Pre-order Now' : 'Add to Cart'}
         </button>
       </div>
       {/* Spacer so the sticky bar above never overlaps the last bit of page content on mobile. */}

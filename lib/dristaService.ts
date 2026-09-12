@@ -6,6 +6,8 @@
 
 export type ProductImage = { url?: string; is_primary?: boolean; alt_text?: string };
 
+export type ProductVideo = { url?: string; title?: string };
+
 export type ProductVariant = {
   id: string;
   sku: string;
@@ -30,7 +32,9 @@ export type Product = {
   item_category?: 'goods' | 'service';
   is_active?: boolean;
   sale_channel?: 'online' | 'offline' | 'both';
+  preorder_enabled?: boolean;
   images?: ProductImage[];
+  videos?: ProductVideo[];
   item_type?: { name?: string } | null;
   uom?: { name?: string } | null;
   variants?: ProductVariant[];
@@ -267,6 +271,7 @@ function withResolvedImages(product: Product): Product {
   return {
     ...product,
     images: product.images?.map((img) => ({ ...img, url: resolveImageUrl(img.url) })),
+    videos: product.videos?.map((vid) => ({ ...vid, url: resolveImageUrl(vid.url) })),
   };
 }
 
