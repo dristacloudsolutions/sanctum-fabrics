@@ -8,6 +8,8 @@ interface AuthContextType {
   loading: boolean;
   login: (identifier: string, password: string) => Promise<void>;
   register: (data: { first_name: string; last_name: string; phone: string; password: string; email?: string }) => Promise<void>;
+  requestOtp: (phone: string) => Promise<{ is_registered: boolean; phone: string }>;
+  verifyOtp: (data: { phone: string; otp: string; first_name?: string; last_name?: string; email?: string }) => Promise<{ is_new?: boolean }>;
   logout: () => Promise<void>;
 }
 
@@ -48,13 +50,34 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
     }
   };
 
+  const requestOtp = async (phone: string) => {
+    setLoading(true);
+    try {
+      const payload = await postJson('/api/auth/otp/request', { phone });
+      return payload as { is_registered: boolean; phone: string };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyOtp = async (data: { phone: string; otp: string; first_name?: string; last_name?: string; email?: string }) => {
+    setLoading(true);
+    try {
+      const payload = await postJson('/api/auth/otp/verify', data);
+      setUser(payload.user);
+      return { is_new: payload.is_new };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, requestOtp, verifyOtp, logout }}>
       {children}
     </AuthContext.Provider>
   );

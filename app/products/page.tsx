@@ -13,10 +13,11 @@ type SearchParams = {
   category?: string;
   min_price?: string;
   max_price?: string;
-  color?: string;
   discount?: string;
   sort?: string;
   // Dynamic per-attribute filters, e.g. attr_size=M&attr_size=L&attr_material=Silk
+  // (this is also how color is filtered — see the attr_color facet — not a
+  // dedicated top-level param).
   [key: `attr_${string}`]: string | string[] | undefined;
 };
 
@@ -40,7 +41,7 @@ export default async function ProductsPage({
   const params = await searchParams;
   const attrParams = Object.entries(params).filter(([k]) => k.startsWith('attr_')) as [string, string | string[]][];
   const hasFilters = Boolean(
-    params.q || params.category || params.min_price || params.max_price || params.color || params.discount || attrParams.length > 0
+    params.q || params.category || params.min_price || params.max_price || params.discount || attrParams.length > 0
   );
 
   const [liveProducts, categories] = await Promise.all([
@@ -49,7 +50,6 @@ export default async function ProductsPage({
       category_id: params.category,
       min_price: params.min_price,
       max_price: params.max_price,
-      color: params.color,
     }),
     getCategoryHierarchy(),
   ]);

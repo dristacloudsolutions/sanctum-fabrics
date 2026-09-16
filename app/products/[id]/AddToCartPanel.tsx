@@ -12,16 +12,16 @@ import { formatINR } from '@/lib/format';
 // catalog actually uses. Falls back to a plain text chip for anything unmapped
 // (e.g. a stray custom shade) rather than guessing a wrong color.
 const COLOR_SWATCHES: Record<string, string> = {
-  red: '#DC2626', maroon: '#7B1E2B', crimson: '#B91C3C',
-  pink: '#EC4899', rose: '#F43F5E', magenta: '#C026D3',
-  orange: '#EA580C', peach: '#FDBA74', coral: '#FB7185',
-  yellow: '#EAB308', mustard: '#CA9A2C', gold: '#D4AF37',
-  green: '#16A34A', 'emerald green': '#0F9D58', olive: '#556B2F', mint: '#6EE7B7',
+  red: '#DC2626', maroon: '#7B1E2B', crimson: '#B91C3C', burgundy: '#722F37', wine: '#722F37', rust: '#B7410E', brick: '#B85C38',
+  pink: '#EC4899', rose: '#F43F5E', magenta: '#C026D3', fuchsia: '#D946EF', 'hot pink': '#EC4899', 'baby pink': '#F4C2C2', salmon: '#FA8072',
+  orange: '#EA580C', peach: '#FDBA74', coral: '#FB7185', apricot: '#FBCEB1',
+  yellow: '#EAB308', mustard: '#CA9A2C', gold: '#D4AF37', lemon: '#FDE047', amber: '#D97706',
+  green: '#16A34A', 'emerald green': '#0F9D58', 'bottle green': '#0B4226', olive: '#556B2F', mint: '#6EE7B7', lime: '#84CC16', 'forest green': '#166534', 'sea green': '#2E8B57',
   teal: '#0D9488', turquoise: '#14B8A6',
-  blue: '#2563EB', navy: '#1E3A8A', indigo: '#3730A3', 'royal blue': '#1D4ED8', sky: '#38BDF8',
-  purple: '#7C3AED', lavender: '#C4B5FD', violet: '#8B5CF6',
-  brown: '#78350F', tan: '#D2B48C', beige: '#E8DCC8', cream: '#F5EFE0', ivory: '#FFFFF0',
-  white: '#FFFFFF', black: '#111111', grey: '#9CA3AF', gray: '#9CA3AF', silver: '#C0C0C0',
+  blue: '#2563EB', navy: '#1E3A8A', indigo: '#3730A3', 'royal blue': '#1D4ED8', sky: '#38BDF8', 'powder blue': '#B0E0E6', denim: '#1560BD', 'steel blue': '#4682B4', cobalt: '#0047AB',
+  purple: '#7C3AED', lavender: '#C4B5FD', violet: '#8B5CF6', lilac: '#C8A2C8', mauve: '#B784A7',
+  brown: '#78350F', tan: '#D2B48C', beige: '#E8DCC8', cream: '#F5EFE0', ivory: '#FFFFF0', khaki: '#C3B091', camel: '#C19A6B', chocolate: '#7B3F00', mahogany: '#C04000', copper: '#B87333', bronze: '#CD7F32', 'rose gold': '#B76E79',
+  white: '#FFFFFF', 'off white': '#F5F5F0', black: '#111111', grey: '#9CA3AF', gray: '#9CA3AF', charcoal: '#36454F', silver: '#C0C0C0',
 };
 const colorSwatchHex = (value: string) => COLOR_SWATCHES[value.trim().toLowerCase()];
 
@@ -49,10 +49,15 @@ export default function AddToCartPanel({
   const variants = product.variants?.filter((v) => v.is_active) || [];
 
   // Every distinct attribute key across all variants (e.g. "color", "length_m"),
-  // each rendered as its own row of selectable chips.
+  // each rendered as its own row of selectable chips. "<Key> Hex" is a paired,
+  // non-selectable companion the admin's color picker writes alongside a color
+  // name (e.g. "Color Hex" next to "Color") — filtered out here so it never
+  // shows up as its own pickable row.
   const attributeKeys = useMemo(() => {
     const keys = new Set<string>();
-    variants.forEach((v) => Object.keys(v.attributes || {}).forEach((k) => keys.add(k)));
+    variants.forEach((v) => Object.keys(v.attributes || {}).forEach((k) => {
+      if (!k.toLowerCase().endsWith(' hex')) keys.add(k);
+    }));
     return Array.from(keys);
   }, [variants]);
 
@@ -134,24 +139,41 @@ export default function AddToCartPanel({
               {key.replace(/_/g, ' ')}
               {selected[key] && <span className="ml-1.5 normal-case tracking-normal text-[color:var(--ink)]/70">— {selected[key]}</span>}
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-start gap-2">
               {valuesFor(key).map((value) => {
                 const isSelected = selected[key] === value;
-                const swatch = isColorAttribute ? colorSwatchHex(value) : undefined;
+                // Representative variant for this color, independent of any other
+                // attribute (length, size, ...) they've picked so far, since that
+                // hasn't necessarily been chosen yet.
+                const repVariant = variants.find((v) => String(v.attributes?.[key]) === value);
+                // The admin's color picker stores the exact hex alongside the name
+                // as "<Key> Hex" — prefer that over guessing from the name via the
+                // local COLOR_SWATCHES map, which only covers names it knows about.
+                const swatch = isColorAttribute
+                  ? (repVariant?.attributes?.[`${key} Hex`] as string | undefined) || colorSwatchHex(value)
+                  : undefined;
 
                 if (swatch) {
+                  const repSku = repVariant?.sku;
                   return (
                     <button
                       key={value}
                       type="button"
                       onClick={() => setSelected((prev) => ({ ...prev, [key]: value }))}
                       aria-label={value}
-                      title={value}
-                      className={`h-9 w-9 rounded-full ring-offset-2 transition-all ${
-                        isSelected ? 'ring-2 ring-[color:var(--accent)]' : 'ring-1 ring-[color:var(--border)] hover:ring-[color:var(--ink)]/40'
-                      }`}
-                      style={{ backgroundColor: swatch }}
-                    />
+                      title={repSku ? `${value} — ${repSku}` : value}
+                      className="flex flex-col items-center gap-1"
+                    >
+                      <span
+                        className={`h-9 w-9 rounded-full ring-offset-2 transition-all ${
+                          isSelected ? 'ring-2 ring-[color:var(--accent)]' : 'ring-1 ring-[color:var(--border)] hover:ring-[color:var(--ink)]/40'
+                        }`}
+                        style={{ backgroundColor: swatch }}
+                      />
+                      <span className={`max-w-[4.5rem] truncate text-[10px] font-medium ${isSelected ? 'text-[color:var(--ink)]/80' : 'text-[color:var(--ink)]/50'}`}>
+                        {value}
+                      </span>
+                    </button>
                   );
                 }
 

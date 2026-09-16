@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ShoppingBag, User, Heart, LogOut, ChevronDown, ShieldCheck } from 'lucide-react';
+import { Menu, X, ShoppingBag, User, Heart, LogOut, ChevronDown } from 'lucide-react';
 import config from '@/app/config/config';
 import { useCart } from '@/app/contexts/CartContext';
 import { useAuth } from '@/app/contexts/AuthContext';
@@ -56,24 +56,6 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
   const flatCategories = categories.slice(0, 3);
   const dropdownCategories = categories.slice(3);
 
-  // Checkout gets a stripped-down header — no promo banner, nav, or "Shop Now"
-  // CTA to click away on — the only two things a shopper should be able to do
-  // here are complete the purchase or (via the logo) bail back to the store.
-  if (pathname?.startsWith('/checkout')) {
-    return (
-      <header className="sticky top-0 z-50 border-b border-[color:var(--border)] bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
-          <Link href="/" className="flex shrink-0 items-center">
-            <Image src="/logo.jpg" alt={business.name} width={1128} height={356} priority className="h-9 w-auto" />
-          </Link>
-          <span className="flex items-center gap-1.5 text-xs font-semibold text-[color:var(--ink)]/50">
-            <ShieldCheck size={14} className="text-emerald-600" /> Secure Checkout
-          </span>
-        </div>
-      </header>
-    );
-  }
-
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur">
       {authModalOpen && <AuthModal onClose={() => setAuthModalOpen(false)} />}
@@ -111,7 +93,12 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
           </Link>
 
           <nav className="ml-auto hidden items-center gap-6 lg:flex">
-            <Link href="/" className="border-b-2 border-[color:var(--accent)] pb-0.5 text-sm font-medium text-[color:var(--accent)]">
+            <Link
+              href="/"
+              className={`text-sm font-medium transition-colors hover:text-[color:var(--accent)] ${
+                pathname === '/' ? 'border-b-2 border-[color:var(--accent)] pb-0.5 text-[color:var(--accent)]' : 'text-[color:var(--ink)]/80'
+              }`}
+            >
               Home
             </Link>
 
@@ -243,7 +230,13 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
 
         {open && (
           <nav className="flex flex-col gap-1 border-t border-[color:var(--border)] px-5 py-3 lg:hidden">
-            <Link href="/" onClick={() => setOpen(false)} className="py-2 text-sm font-medium uppercase tracking-widest text-[color:var(--ink)]/80">
+            <Link
+              href="/"
+              onClick={() => setOpen(false)}
+              className={`py-2 text-sm font-medium uppercase tracking-widest ${
+                pathname === '/' ? 'text-[color:var(--accent)] font-semibold' : 'text-[color:var(--ink)]/80'
+              }`}
+            >
               Home
             </Link>
             {categories.length > 0 && (

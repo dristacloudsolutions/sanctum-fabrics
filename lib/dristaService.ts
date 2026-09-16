@@ -76,6 +76,8 @@ export type SalesOrder = {
   payment_method?: 'online' | 'cod';
   status: string;
   fulfillment_status?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  shipping_cost?: number;
+  customer?: { id: string; name: string; email?: string; phone?: string };
 };
 
 export type OrderLineItem = {
@@ -107,7 +109,9 @@ export type OrderDetail = SalesOrder & {
 
 export type CustomerSession = {
   access_token: string;
-  user: { id: string; first_name: string; last_name: string; email: string; role: string; customer_id?: string };
+  refresh_token?: string;
+  user: { id: string; first_name: string; last_name: string; email: string | null; phone?: string; role: string; customer_id?: string };
+  is_new?: boolean;
 };
 
 export type Promotion = {
@@ -201,6 +205,10 @@ export function buildAttributeFacets(products: Product[]): AttributeFacet[] {
   for (const product of products) {
     for (const variant of product.variants || []) {
       for (const [key, value] of Object.entries(variant.attributes || {})) {
+        // "<Key> Hex" (e.g. "Color Hex") is a paired swatch value the admin's
+        // color picker writes alongside a color name — not a real filterable
+        // attribute on its own.
+        if (key.toLowerCase().endsWith(' hex')) continue;
         if (value === undefined || value === null || value === '') continue;
         if (!valuesByKey.has(key)) valuesByKey.set(key, new Set());
         valuesByKey.get(key)!.add(String(value));
@@ -280,7 +288,6 @@ export type ProductFilters = {
   category_id?: string;
   min_price?: string;
   max_price?: string;
-  color?: string;
 };
 
 /** All active products in the catalog, optionally filtered. Returns [] (never
@@ -295,7 +302,6 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
     if (filters.category_id) qs.set('category_id', filters.category_id);
     if (filters.min_price) qs.set('min_price', filters.min_price);
     if (filters.max_price) qs.set('max_price', filters.max_price);
-    if (filters.color) qs.set('color', filters.color);
     const query = qs.toString();
     const payload = await dristaFetch(`/v1/ecommerce/products${query ? `?${query}` : ''}`);
     const items = (payload?.data || []) as Product[];
@@ -405,6 +411,28 @@ export async function loginCustomer(data: { phone?: string; email?: string; pass
   return payload.data as CustomerSession;
 }
 
+export async function requestCustomerOtp(phone: string): Promise<{ is_registered: boolean; phone: string }> {
+  const payload = await dristaAction('/v1/ecommerce/auth/otp/request', {
+    method: 'POST',
+    body: JSON.stringify({ phone }),
+  });
+  return payload.data as { is_registered: boolean; phone: string };
+}
+
+export async function verifyCustomerOtp(data: {
+  phone: string;
+  otp: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+}): Promise<CustomerSession> {
+  const payload = await dristaAction('/v1/ecommerce/auth/otp/verify', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return payload.data as CustomerSession;
+}
+
 export type CustomerProfile = { id: string; first_name: string; last_name: string; email?: string; phone?: string; role: string };
 
 export async function getMe(token: string): Promise<CustomerProfile | null> {
@@ -422,6 +450,7 @@ export async function getOrCreateCart(token?: string): Promise<{ id: string }> {
 }
 
 export type AddressDetails = {
+  name?: string;
   line1: string;
   line2?: string;
   city: string;

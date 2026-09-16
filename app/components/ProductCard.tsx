@@ -46,8 +46,6 @@ export default function ProductCard({ product }: { product: Product }) {
   return (
     <Link
       href={productUrl(product)}
-      target="_blank"
-      rel="noopener noreferrer"
       className="group block overflow-hidden border border-[color:var(--ink)]/8 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-12px_rgba(42,36,32,0.18)]"
     >
       {/* Brand strip */}
