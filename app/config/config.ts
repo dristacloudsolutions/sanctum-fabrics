@@ -19,7 +19,7 @@ export const config = {
     contact: {
       email: 'sanctumavemaria@gmail.com',
       phone: '+91 99208 22231',
-      whatsApp: '+91 99208 22231',
+      whatsApp: '+91 93218 46790',
       address: 'Sanctum Fabrics,\nIndia',
     },
 

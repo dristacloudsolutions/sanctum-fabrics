@@ -40,7 +40,7 @@ function WhatsAppIcon({ size = 14 }: { size?: number }) {
 
 export default function Header({ categories = [] }: { categories?: CategoryGroup[] }) {
   const [open, setOpen] = useState(false);
-  const [collectionsOpen, setCollectionsOpen] = useState(false);
+  const [expandedCatIds, setExpandedCatIds] = useState<Record<string, boolean>>({});
   const [profileOpen, setProfileOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const { itemCount } = useCart();
@@ -48,6 +48,10 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
   const { itemIds: wishlistIds } = useWishlist();
   const { business } = config;
   const pathname = usePathname();
+
+  const toggleCategory = (id: string) => {
+    setExpandedCatIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   // First few real categories shown as flat nav links (matching the flat
   // Sarees/Churidars/Tops layout of the reference); the rest live in the
@@ -57,8 +61,9 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
   const dropdownCategories = categories.slice(3);
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur">
+    <>
       {authModalOpen && <AuthModal onClose={() => setAuthModalOpen(false)} />}
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur">
 
       {/* Welcome / social top bar */}
       <div className="hidden bg-[color:var(--ink)] px-5 py-2 text-white sm:block">
@@ -104,32 +109,86 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
 
             {dropdownCategories.length > 0 && (
               <div className="group relative">
-                <button className="flex items-center gap-1 text-sm font-medium text-[color:var(--ink)]/80 transition-colors hover:text-[color:var(--accent)]">
-                  Collections <ChevronDown size={13} />
+                <button className="flex items-center gap-1 py-1 text-sm font-medium text-[color:var(--ink)]/80 transition-colors hover:text-[color:var(--accent)]">
+                  Collections <ChevronDown size={13} className="transition-transform duration-200 group-hover:rotate-180" />
                 </button>
-                <div className="invisible absolute left-0 top-full w-56 rounded-xl border border-[color:var(--border)] bg-white p-2 opacity-0 shadow-xl transition-all group-hover:visible group-hover:opacity-100">
-                  {dropdownCategories.map((cat) => (
-                    <Link
-                      key={cat.id}
-                      href={`/products?category=${cat.id}`}
-                      className="block rounded-lg px-3 py-2 text-sm text-[color:var(--ink)]/80 hover:bg-[color:var(--cream)] hover:text-[color:var(--accent)]"
-                    >
-                      {cat.name}
-                    </Link>
-                  ))}
+                <div className="invisible absolute left-0 top-full z-50 pt-1.5 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100">
+                  <div className="w-56 rounded-xl border border-[color:var(--border)] bg-white p-2 shadow-xl">
+                    {dropdownCategories.map((cat) => (
+                      <div key={cat.id} className="py-1">
+                        <Link
+                          href={`/products?category=${cat.id}`}
+                          className="block rounded-lg px-3 py-1.5 text-sm font-medium text-[color:var(--ink)]/90 hover:bg-[color:var(--cream)] hover:text-[color:var(--accent)]"
+                        >
+                          {cat.name}
+                        </Link>
+                        {cat.children && cat.children.length > 0 && (
+                          <div className="ml-3 mt-0.5 flex flex-col gap-0.5 border-l border-[color:var(--border)] pl-2">
+                            {cat.children.map((child) => (
+                              <Link
+                                key={child.id}
+                                href={`/products?category=${child.id}`}
+                                className="block rounded px-2 py-1 text-xs text-[color:var(--ink)]/75 hover:bg-[color:var(--cream)] hover:text-[color:var(--accent)]"
+                              >
+                                {child.name}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
 
-            {flatCategories.map((cat) => (
-              <Link
-                key={cat.id}
-                href={`/products?category=${cat.id}`}
-                className="text-sm font-medium text-[color:var(--ink)]/80 transition-colors hover:text-[color:var(--accent)]"
-              >
-                {cat.name}
-              </Link>
-            ))}
+            {flatCategories.map((cat) => {
+              const hasChildren = Boolean(cat.children && cat.children.length > 0);
+
+              if (hasChildren) {
+                return (
+                  <div key={cat.id} className="group relative">
+                    <Link
+                      href={`/products?category=${cat.id}`}
+                      className="flex items-center gap-1 py-1 text-sm font-medium text-[color:var(--ink)]/80 transition-colors hover:text-[color:var(--accent)]"
+                    >
+                      {cat.name}
+                      <ChevronDown size={13} className="transition-transform duration-200 group-hover:rotate-180" />
+                    </Link>
+                    <div className="invisible absolute left-0 top-full z-50 pt-1.5 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100">
+                      <div className="w-52 rounded-xl border border-[color:var(--border)] bg-white p-2 shadow-xl">
+                        <Link
+                          href={`/products?category=${cat.id}`}
+                          className="block rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-[color:var(--accent)] hover:bg-[color:var(--cream)]"
+                        >
+                          All {cat.name}
+                        </Link>
+                        <div className="my-1 border-t border-[color:var(--border)]" />
+                        {cat.children!.map((child) => (
+                          <Link
+                            key={child.id}
+                            href={`/products?category=${child.id}`}
+                            className="block rounded-lg px-3 py-2 text-sm text-[color:var(--ink)]/80 hover:bg-[color:var(--cream)] hover:text-[color:var(--accent)]"
+                          >
+                            {child.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={cat.id}
+                  href={`/products?category=${cat.id}`}
+                  className="text-sm font-medium text-[color:var(--ink)]/80 transition-colors hover:text-[color:var(--accent)]"
+                >
+                  {cat.name}
+                </Link>
+              );
+            })}
 
             <Link href="/products" className="text-sm font-medium text-[color:var(--ink)]/80 transition-colors hover:text-[color:var(--accent)]">
               New Arrivals
@@ -239,28 +298,57 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
             >
               Home
             </Link>
-            {categories.length > 0 && (
-              <button
-                onClick={() => setCollectionsOpen((v) => !v)}
-                className="flex items-center justify-between py-2 text-sm font-medium uppercase tracking-widest text-[color:var(--ink)]/80"
-              >
-                Collections <ChevronDown size={14} className={collectionsOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
-              </button>
-            )}
-            {collectionsOpen && (
-              <div className="ml-3 flex flex-col gap-1 border-l border-[color:var(--border)] pl-3">
-                {categories.map((cat) => (
-                  <Link
-                    key={cat.id}
-                    href={`/products?category=${cat.id}`}
-                    onClick={() => setOpen(false)}
-                    className="py-1.5 text-sm text-[color:var(--ink)]/70"
-                  >
-                    {cat.name}
-                  </Link>
-                ))}
-              </div>
-            )}
+            {categories.map((cat) => {
+              const hasChildren = Boolean(cat.children && cat.children.length > 0);
+              const isExpanded = expandedCatIds[cat.id];
+              return (
+                <div key={cat.id} className="flex flex-col">
+                  <div className="flex items-center justify-between py-2 text-sm font-medium uppercase tracking-widest text-[color:var(--ink)]/80">
+                    <Link
+                      href={`/products?category=${cat.id}`}
+                      onClick={() => setOpen(false)}
+                      className="hover:text-[color:var(--accent)]"
+                    >
+                      {cat.name}
+                    </Link>
+                    {hasChildren && (
+                      <button
+                        type="button"
+                        onClick={() => toggleCategory(cat.id)}
+                        className="p-1 text-[color:var(--ink)]/60 hover:text-[color:var(--accent)]"
+                        aria-label={`Toggle ${cat.name} subcategories`}
+                      >
+                        <ChevronDown
+                          size={15}
+                          className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                        />
+                      </button>
+                    )}
+                  </div>
+                  {hasChildren && isExpanded && (
+                    <div className="mb-2 ml-3 flex flex-col gap-1 border-l-2 border-[color:var(--accent)]/30 pl-3">
+                      <Link
+                        href={`/products?category=${cat.id}`}
+                        onClick={() => setOpen(false)}
+                        className="py-1 text-xs font-semibold uppercase tracking-wider text-[color:var(--accent)]"
+                      >
+                        All {cat.name}
+                      </Link>
+                      {cat.children!.map((child) => (
+                        <Link
+                          key={child.id}
+                          href={`/products?category=${child.id}`}
+                          onClick={() => setOpen(false)}
+                          className="py-1 text-sm text-[color:var(--ink)]/70 hover:text-[color:var(--accent)]"
+                        >
+                          {child.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             <Link href="/products" onClick={() => setOpen(false)} className="py-2 text-sm font-medium uppercase tracking-widest text-[color:var(--ink)]/80">
               New Arrivals
             </Link>
@@ -271,5 +359,6 @@ export default function Header({ categories = [] }: { categories?: CategoryGroup
         )}
       </div>
     </header>
+    </>
   );
 }

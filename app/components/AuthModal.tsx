@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Phone, ArrowRight, ShieldCheck, Mail, User, RotateCw, Loader2 } from 'lucide-react';
 import { useAuth } from '@/app/contexts/AuthContext';
 
@@ -30,9 +31,11 @@ function AuthPanel({ onClose, subtitle }: { onClose?: () => void; subtitle: stri
   const [countdown, setCountdown] = useState(30);
 
   // Password fallback states
-  const [passwordMode, setPasswordMode] = useState<'login' | 'register'>('login');
+  const [passwordMode, setPasswordMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetSuccess, setResetSuccess] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     first_name: '',
     last_name: '',
@@ -151,6 +154,33 @@ function AuthPanel({ onClose, subtitle }: { onClose?: () => void; subtitle: stri
     }
   };
 
+  // Handle forgot password request
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = forgotEmail.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to request password reset');
+      setResetSuccess(true);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to request password reset');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="relative mx-auto w-full max-w-md rounded-3xl border border-[color:var(--border)] bg-white p-7 shadow-2xl">
       {onClose && (
@@ -168,7 +198,9 @@ function AuthPanel({ onClose, subtitle }: { onClose?: () => void; subtitle: stri
       <div className="mb-6">
         <h2 className="font-serif text-2xl text-[color:var(--ink)]">
           {authMethod === 'password'
-            ? passwordMode === 'login'
+            ? passwordMode === 'forgot'
+              ? 'Reset Password'
+              : passwordMode === 'login'
               ? 'Sign In with Password'
               : 'Create Account'
             : otpStep === 'phone'
@@ -178,7 +210,9 @@ function AuthPanel({ onClose, subtitle }: { onClose?: () => void; subtitle: stri
             : 'Complete Your Account'}
         </h2>
         <p className="mt-1.5 text-xs text-[color:var(--ink)]/60 leading-relaxed">
-          {otpStep === 'phone' || authMethod === 'password'
+          {authMethod === 'password' && passwordMode === 'forgot'
+            ? 'Enter your registered email address to receive a secure link to reset your password.'
+            : otpStep === 'phone' || authMethod === 'password'
             ? subtitle
             : `We've sent a 6-digit verification code to +91 ${phone.replace(/\D/g, '').slice(-10)}`}
         </p>
@@ -381,51 +415,153 @@ function AuthPanel({ onClose, subtitle }: { onClose?: () => void; subtitle: stri
       {/* ─── Method 2: Password Fallback ──────────────────────────────────────── */}
       {authMethod === 'password' && (
         <div>
-          <div className="mb-5 flex gap-4 border-b border-[color:var(--border)]">
-            {(['login', 'register'] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => {
-                  setPasswordMode(m);
-                  setError(null);
-                }}
-                className={`pb-3 text-xs font-semibold uppercase tracking-wider transition-colors ${
-                  passwordMode === m
-                    ? 'border-b-2 border-[color:var(--accent)] text-[color:var(--ink)]'
-                    : 'text-[color:var(--ink)]/40 hover:text-[color:var(--ink)]/70'
-                }`}
-              >
-                {m === 'login' ? 'Sign In' : 'Create Account'}
-              </button>
-            ))}
-          </div>
+          {passwordMode === 'forgot' ? (
+            <div className="space-y-4">
+              {resetSuccess ? (
+                <div className="space-y-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
+                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                    <Mail size={20} />
+                  </div>
+                  <p className="text-sm font-semibold text-emerald-900">Reset Link Sent</p>
+                  <p className="text-xs text-emerald-700 leading-relaxed">
+                    If an account exists with <span className="font-medium">{forgotEmail}</span>, a secure password reset link has been dispatched to your email.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPasswordMode('login');
+                      setResetSuccess(false);
+                    }}
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[color:var(--accent)] hover:underline"
+                  >
+                    ← Back to Sign In
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotSubmit} className="space-y-4">
+                  <div>
+                    <label className={labelCls}>Registered Email Address *</label>
+                    <input
+                      required
+                      type="email"
+                      autoFocus
+                      placeholder="name@example.com"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      className={inputCls}
+                    />
+                    <p className="mt-1.5 text-[11px] text-[color:var(--ink)]/50">
+                      We will send instructions to create a new password.
+                    </p>
+                  </div>
 
-          <form onSubmit={handlePasswordSubmit} className="space-y-3.5">
-            {passwordMode === 'login' ? (
-              <>
-                <div>
-                  <label className={labelCls}>Phone or Email *</label>
-                  <input
-                    required
-                    placeholder="Mobile number or email"
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    className={inputCls}
-                  />
-                </div>
-                <div>
-                  <label className={labelCls}>Password *</label>
-                  <input
-                    required
-                    type="password"
-                    placeholder="Enter password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={inputCls}
-                  />
-                </div>
-              </>
-            ) : (
+                  {error && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-600">
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--primary)] px-6 py-3.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-[color:var(--primary)]/90 hover:-translate-y-0.5 disabled:opacity-60"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Sending reset link…</span>
+                      </>
+                    ) : (
+                      <span>Send Reset Link</span>
+                    )}
+                  </button>
+
+                  <div className="flex items-center justify-between pt-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPasswordMode('login');
+                        setError(null);
+                      }}
+                      className="font-medium text-[color:var(--ink)]/70 hover:text-[color:var(--accent)]"
+                    >
+                      ← Back to Sign In
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMethod('otp');
+                        setError(null);
+                      }}
+                      className="font-semibold text-[color:var(--accent)] hover:underline"
+                    >
+                      Use Mobile OTP instead
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="mb-5 flex gap-4 border-b border-[color:var(--border)]">
+                {(['login', 'register'] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => {
+                      setPasswordMode(m);
+                      setError(null);
+                    }}
+                    className={`pb-3 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                      passwordMode === m
+                        ? 'border-b-2 border-[color:var(--accent)] text-[color:var(--ink)]'
+                        : 'text-[color:var(--ink)]/40 hover:text-[color:var(--ink)]/70'
+                    }`}
+                  >
+                    {m === 'login' ? 'Sign In' : 'Create Account'}
+                  </button>
+                ))}
+              </div>
+
+              <form onSubmit={handlePasswordSubmit} className="space-y-3.5">
+                {passwordMode === 'login' ? (
+                  <>
+                    <div>
+                      <label className={labelCls}>Phone or Email *</label>
+                      <input
+                        required
+                        placeholder="Mobile number or email"
+                        value={identifier}
+                        onChange={(e) => setIdentifier(e.target.value)}
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className={labelCls}>Password *</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPasswordMode('forgot');
+                            setError(null);
+                            setResetSuccess(false);
+                            if (identifier.includes('@')) setForgotEmail(identifier);
+                          }}
+                          className="text-xs font-semibold text-[color:var(--accent)] hover:underline"
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
+                      <input
+                        required
+                        type="password"
+                        placeholder="Enter password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className={inputCls}
+                      />
+                    </div>
+                  </>
+                ) : (
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -497,7 +633,9 @@ function AuthPanel({ onClose, subtitle }: { onClose?: () => void; subtitle: stri
             >
               {submitting ? 'Please wait…' : passwordMode === 'login' ? 'Sign In' : 'Create Account & Continue'}
             </button>
-          </form>
+              </form>
+            </>
+          )}
 
           <div className="mt-5 border-t border-[color:var(--border)] pt-4 text-center">
             <button
@@ -524,11 +662,33 @@ export default function AuthModal({
   onClose: () => void;
   subtitle?: string;
 }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md">
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/60 p-4 py-8 backdrop-blur-xs animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div onClick={(e) => e.stopPropagation()} className="my-auto w-full max-w-md">
         <AuthPanel onClose={onClose} subtitle={subtitle} />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -433,6 +433,20 @@ export async function verifyCustomerOtp(data: {
   return payload.data as CustomerSession;
 }
 
+export async function requestPasswordReset(email: string): Promise<void> {
+  await dristaAction('/v1/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function submitPasswordReset(token: string, password: string): Promise<void> {
+  await dristaAction('/v1/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, password }),
+  });
+}
+
 export type CustomerProfile = { id: string; first_name: string; last_name: string; email?: string; phone?: string; role: string };
 
 export async function getMe(token: string): Promise<CustomerProfile | null> {
