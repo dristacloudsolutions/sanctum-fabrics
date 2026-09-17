@@ -57,8 +57,26 @@ export default async function ProductsPage({
   // Sample data has no filtering support, so it's only a fallback for the
   // unfiltered "browse everything" view — a filtered live query returning
   // zero results should show as "no matches", not silently swap to samples.
-  const baseProducts = liveProducts.length > 0 ? liveProducts : hasFilters ? [] : sampleProducts;
-  const usingSample = liveProducts.length === 0 && !hasFilters;
+  let baseProducts = liveProducts.length > 0 ? liveProducts : hasFilters ? [] : sampleProducts;
+  let usingSample = liveProducts.length === 0 && !hasFilters;
+
+  // An empty category/subcategory shouldn't dead-end the page — fall back to
+  // the wider catalog (still honoring search/price if set) rather than
+  // showing nothing, since a shopper landing here from a category link with
+  // no stock yet still wants to see *something*.
+  let categoryFallback = false;
+  if (params.category && liveProducts.length === 0) {
+    const fallbackProducts = await getProducts({
+      q: params.q,
+      min_price: params.min_price,
+      max_price: params.max_price,
+    });
+    if (fallbackProducts.length > 0) {
+      baseProducts = fallbackProducts;
+      categoryFallback = true;
+      usingSample = false;
+    }
+  }
 
   // Facet option lists are derived from the base (pre-attribute-filter) set
   // so a group doesn't vanish the moment you pick one of its own values.
@@ -99,6 +117,11 @@ export default async function ProductsPage({
         <p className="text-sm text-[color:var(--ink)]/60">
           {products.length} piece{products.length === 1 ? '' : 's'} available
         </p>
+        {categoryFallback && (
+          <p className="mt-1 text-xs text-[color:var(--ink)]/50">
+            No pieces in this category yet — showing other products you might like.
+          </p>
+        )}
         {usingSample && (
           <p className="mt-1 text-xs text-[color:var(--ink)]/40">
             Sample catalog shown — connect the live catalog in lib/dristaService.ts once onboarded.

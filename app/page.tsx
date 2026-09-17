@@ -92,9 +92,13 @@ export default async function Home() {
             <span className="h-px flex-1 bg-[color:var(--accent)]/40" />
           </div>
         </Reveal>
-        <Reveal delay={0.1}>
-          <ProductCarousel products={newArrivals} />
-        </Reveal>
+        {/* Not wrapped in Reveal — framer-motion leaves a persistent `transform`
+            on its wrapper div even at rest (translateY(0px), never removed),
+            and a transform on an ancestor is a known cause of broken touch/
+            momentum scrolling for a nested overflow-x-auto container on
+            mobile Safari/Chrome. The carousel has its own entrance motion
+            anyway, so it doesn't need the scroll-reveal treatment. */}
+        <ProductCarousel products={newArrivals} />
       </section>
 
       {/* Featured Pieces */}

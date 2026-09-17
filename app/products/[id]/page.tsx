@@ -38,9 +38,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               <span className="h-px flex-1 bg-[color:var(--accent)]/40" />
             </div>
           </Reveal>
-          <Reveal delay={0.1}>
-            <ProductCarousel products={similarProducts} />
-          </Reveal>
+          {/* Not wrapped in Reveal — see app/page.tsx's New Arrivals section
+              for why: a persistent framer-motion transform on an ancestor
+              breaks touch/momentum scrolling for this carousel's nested
+              overflow-x-auto track on mobile. */}
+          <ProductCarousel products={similarProducts} />
         </section>
       )}
     </div>
