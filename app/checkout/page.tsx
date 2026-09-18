@@ -84,7 +84,7 @@ function CheckoutForm() {
   const [gstin, setGstin] = useState('');
 
   // Payment
-  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod'>('online');
+  const paymentMethod = 'online';
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scriptReady, setScriptReady] = useState(false);
@@ -163,7 +163,7 @@ function CheckoutForm() {
           const options = (payload.options || []) as ShippingOption[];
           setShippingOptions(options);
           if (options.length > 0) {
-            setSelectedOptionId(options[0].optionId);
+            setSelectedOptionId((prev) => (prev && options.some((o) => o.optionId === prev) ? prev : options[0].optionId));
           } else {
             setSelectedOptionId(null);
           }
@@ -258,7 +258,7 @@ function CheckoutForm() {
           shipping_address: address,
           phone: activePhone.trim() || undefined,
           coupon_code: activeCoupon,
-          shipping_option_id: selectedOptionId || undefined,
+          shipping_option_id: selectedOptionId || (shippingOptions.length > 0 ? shippingOptions[0].optionId : undefined),
           gstin: gstin.trim() || undefined,
           payment_method: paymentMethod,
           ...(!user && {
@@ -273,13 +273,6 @@ function CheckoutForm() {
       if (!checkoutRes.ok) throw new Error(checkoutPayload?.error || 'Failed to place order');
       const order = checkoutPayload.order;
 
-      // Cash on Delivery
-      if (paymentMethod === 'cod') {
-        await refresh();
-        router.push(`/order-success?orderId=${order.id}&method=cod`);
-        return;
-      }
-
       // Online payment via Razorpay
       const initiateRes = await fetch('/api/payment/initiate', {
         method: 'POST',
@@ -289,9 +282,8 @@ function CheckoutForm() {
       const initiatePayload = await initiateRes.json();
       if (!initiateRes.ok) {
         if (/no active payment gateway/i.test(initiatePayload?.error || '')) {
-          setPaymentMethod('cod');
           throw new Error(
-            "Online payment is temporarily unavailable for this store. We've selected Cash on Delivery — please tap Confirm Order below."
+            'Online payment gateway is temporarily unavailable for this store. Please try again shortly or contact customer support.'
           );
         }
         throw new Error(initiatePayload?.error || 'Failed to start payment');
@@ -893,35 +885,25 @@ function CheckoutForm() {
                 </div>
               </div>
 
-              {/* Payment Method Selector */}
+              {/* Payment Method */}
               <div className="rounded-3xl border border-[color:var(--border)] bg-white p-6 shadow-xs">
                 <div className="flex items-center gap-2 border-b border-[color:var(--border)] pb-3">
                   <CreditCard size={18} className="text-[color:var(--accent)]" />
-                  <h3 className="font-serif text-base font-semibold text-[color:var(--ink)]">Select Payment Method</h3>
+                  <h3 className="font-serif text-base font-semibold text-[color:var(--ink)]">Payment Method</h3>
                 </div>
 
-                <div className="mt-4 space-y-3">
-                  {/* Online Payment Option */}
-                  <label
-                    className={`flex cursor-pointer flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border p-4 transition-all duration-200 ${
-                      paymentMethod === 'online'
-                        ? 'border-[color:var(--accent)] bg-[color:var(--accent)]/5 ring-1 ring-[color:var(--accent)] shadow-xs'
-                        : 'border-[color:var(--border)] bg-white hover:border-[color:var(--ink)]/30'
-                    }`}
-                  >
+                <div className="mt-4">
+                  {/* Online Payment Card */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-[color:var(--accent)] bg-[color:var(--accent)]/5 ring-1 ring-[color:var(--accent)] p-4 shadow-xs">
                     <div className="flex items-start gap-3">
-                      <input
-                        type="radio"
-                        name="payment_method"
-                        checked={paymentMethod === 'online'}
-                        onChange={() => setPaymentMethod('online')}
-                        className="accent-[color:var(--accent)] h-4 w-4 mt-1"
-                      />
+                      <div className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[color:var(--accent)] text-white shrink-0">
+                        <Check size={12} strokeWidth={3} />
+                      </div>
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-sm text-[color:var(--ink)]">Pay Online</span>
                           <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
-                            Instant &amp; Recommended
+                            Instant &amp; Secure
                           </span>
                         </div>
                         <p className="mt-0.5 text-xs text-[color:var(--ink)]/60">
@@ -930,38 +912,12 @@ function CheckoutForm() {
                       </div>
                     </div>
                     {/* Payment badges */}
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[color:var(--ink)]/40 pl-7 sm:pl-0">
-                      <span className="rounded border border-[color:var(--border)] bg-white px-1.5 py-0.5">UPI</span>
-                      <span className="rounded border border-[color:var(--border)] bg-white px-1.5 py-0.5">Cards</span>
-                      <span className="rounded border border-[color:var(--border)] bg-white px-1.5 py-0.5">NetBanking</span>
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[color:var(--ink)]/40 pl-8 sm:pl-0">
+                      <span className="rounded border border-[color:var(--border)] bg-white px-2 py-0.5">UPI</span>
+                      <span className="rounded border border-[color:var(--border)] bg-white px-2 py-0.5">Cards</span>
+                      <span className="rounded border border-[color:var(--border)] bg-white px-2 py-0.5">NetBanking</span>
                     </div>
-                  </label>
-
-                  {/* Cash on Delivery Option */}
-                  <label
-                    className={`flex cursor-pointer flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border p-4 transition-all duration-200 ${
-                      paymentMethod === 'cod'
-                        ? 'border-[color:var(--accent)] bg-[color:var(--accent)]/5 ring-1 ring-[color:var(--accent)] shadow-xs'
-                        : 'border-[color:var(--border)] bg-white hover:border-[color:var(--ink)]/30'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <input
-                        type="radio"
-                        name="payment_method"
-                        checked={paymentMethod === 'cod'}
-                        onChange={() => setPaymentMethod('cod')}
-                        className="accent-[color:var(--accent)] h-4 w-4 mt-1"
-                      />
-                      <div>
-                        <span className="font-semibold text-sm text-[color:var(--ink)]">Cash on Delivery (COD)</span>
-                        <p className="mt-0.5 text-xs text-[color:var(--ink)]/60">
-                          Pay cash or UPI to the courier executive upon doorstep delivery.
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-xs font-medium text-[color:var(--ink)]/50 pl-7 sm:pl-0">At Doorstep</span>
-                  </label>
+                  </div>
                 </div>
 
                 <div className="mt-4 flex items-center gap-2 rounded-xl bg-[color:var(--cream)]/60 p-3 text-xs text-[color:var(--ink)]/60">
@@ -995,11 +951,6 @@ function CheckoutForm() {
                     <>
                       <Loader2 size={18} className="animate-spin" />
                       <span>Processing Order…</span>
-                    </>
-                  ) : paymentMethod === 'cod' ? (
-                    <>
-                      <Truck size={18} />
-                      <span>Confirm Order (Cash on Delivery) • ₹{formatINR(total)}</span>
                     </>
                   ) : (
                     <>
