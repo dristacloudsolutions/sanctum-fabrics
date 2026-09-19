@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
-import { getProducts, getCategoryHierarchy, buildAttributeFacets, type Product } from '@/lib/dristaService';
+import { getProducts, getCategoryHierarchy, buildAttributeFacets, getVariantAttribute, type Product, type AttributeFacet, type AttributeFacetValue } from '@/lib/dristaService';
+import { colorSwatchHex } from '@/lib/colorSwatches';
 import { sampleProducts } from '@/lib/sampleProducts';
 
 export const metadata = {
@@ -88,8 +89,13 @@ export default async function ProductsPage({
       const wantedValues = toValueList(selected);
       if (wantedValues.length === 0) return true;
       const attrKey = key.slice('attr_'.length);
+      // Case-insensitive: the facet's key is one canonical casing (see
+      // buildAttributeFacets), but any given variant may still store this
+      // attribute under a differently-cased key (e.g. "color" vs "Color") —
+      // an exact-key lookup here was excluding those variants/products
+      // even though they clearly have a matching color.
       return (product.variants || []).some((variant) => {
-        const val = variant.attributes?.[attrKey];
+        const val = getVariantAttribute(variant, attrKey);
         return val !== undefined && wantedValues.includes(String(val));
       });
     });
@@ -261,25 +267,34 @@ export default async function ProductsPage({
 
 
             {/* Dynamic attribute facets — Size, Material, Fit, whatever the
-                catalog's variants actually carry, no hardcoded list. */}
+                catalog's variants actually carry, no hardcoded list. Color
+                gets its own swatch-dot + count treatment; everything else
+                stays a plain checkbox list. */}
             {attributeFacets.map((facet) => (
-              <details key={facet.key} className="group py-4">
-                <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-[color:var(--ink)]">
+              <details key={facet.key} className="group py-4" open={facet.label.toLowerCase() === 'color'}>
+                <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold uppercase tracking-wide text-[color:var(--ink)]">
                   {facet.label}
                   <FacetToggleIcon />
                 </summary>
-                <div className="mt-3 space-y-2">
-                  {facet.values.map((value) => (
-                    <label key={value} className="flex items-center gap-2 text-sm text-[color:var(--ink)]/70">
-                      <input
-                        type="checkbox"
-                        name={`attr_${facet.key}`}
-                        value={value}
-                        defaultChecked={isAttrChecked(facet.key, value)}
-                      />
-                      {value}
-                    </label>
-                  ))}
+                <div className="mt-3">
+                  {facet.label.toLowerCase() === 'color' ? (
+                    <ColorFacetList facet={facet} isChecked={(v) => isAttrChecked(facet.key, v)} />
+                  ) : (
+                    <div className="space-y-2">
+                      {facet.values.map(({ value, count }) => (
+                        <label key={value} className="flex items-center gap-2 text-sm text-[color:var(--ink)]/70">
+                          <input
+                            type="checkbox"
+                            name={`attr_${facet.key}`}
+                            value={value}
+                            defaultChecked={isAttrChecked(facet.key, value)}
+                          />
+                          {value}
+                          <span className="text-[color:var(--ink)]/40">({count})</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </details>
             ))}
@@ -322,5 +337,60 @@ function FacetToggleIcon() {
       <span className="group-open:hidden">+</span>
       <span className="hidden group-open:inline">−</span>
     </span>
+  );
+}
+
+const COLOR_FACET_VISIBLE_COUNT = 7;
+
+function ColorSwatchRow({
+  facetKey,
+  value,
+  hex,
+  isChecked,
+}: {
+  facetKey: string;
+  value: AttributeFacetValue;
+  hex?: string;
+  isChecked: boolean;
+}) {
+  return (
+    <label className="flex items-center gap-2.5 text-sm text-[color:var(--ink)]/80">
+      <input type="checkbox" name={`attr_${facetKey}`} value={value.value} defaultChecked={isChecked} />
+      {hex ? (
+        <span className="h-5 w-5 shrink-0 rounded-full ring-1 ring-black/10" style={{ backgroundColor: hex }} />
+      ) : (
+        <span className="h-5 w-5 shrink-0 rounded-full bg-[color:var(--cream)] ring-1 ring-black/10" />
+      )}
+      <span>{value.value}</span>
+      <span className="text-[color:var(--ink)]/40">({value.count})</span>
+    </label>
+  );
+}
+
+// Swatch dot + name + count per color, like a typical marketplace color
+// filter — only the first few show by default, the rest sit behind a
+// "+N more" disclosure (plain <details>, no client JS needed).
+function ColorFacetList({ facet, isChecked }: { facet: AttributeFacet; isChecked: (value: string) => boolean }) {
+  const visible = facet.values.slice(0, COLOR_FACET_VISIBLE_COUNT);
+  const rest = facet.values.slice(COLOR_FACET_VISIBLE_COUNT);
+
+  return (
+    <div className="space-y-2.5">
+      {visible.map((v) => (
+        <ColorSwatchRow key={v.value} facetKey={facet.key} value={v} hex={v.hex || colorSwatchHex(v.value)} isChecked={isChecked(v.value)} />
+      ))}
+      {rest.length > 0 && (
+        <details className="group/more">
+          <summary className="cursor-pointer list-none text-xs font-semibold text-[color:var(--accent)]">
+            + {rest.length} more
+          </summary>
+          <div className="mt-2.5 space-y-2.5">
+            {rest.map((v) => (
+              <ColorSwatchRow key={v.value} facetKey={facet.key} value={v} hex={v.hex || colorSwatchHex(v.value)} isChecked={isChecked(v.value)} />
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
   );
 }

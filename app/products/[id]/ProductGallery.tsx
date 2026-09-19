@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, ZoomIn, ChevronLeft, ChevronRight, Play } from 'lucide-react';
-import type { ProductImage, ProductVideo } from '@/lib/dristaService';
+import type { ProductImage, ProductVideo, ProductVariant } from '@/lib/dristaService';
 
 const LENS_SIZE = 160; // px — the magnifier's visible diameter
 const ZOOM_FACTOR = 2.5;
@@ -17,28 +17,78 @@ type MediaItem =
   | { kind: 'image'; url: string; alt?: string }
   | { kind: 'video'; url: string; title?: string };
 
+// A short "Teal Green, Free Size" style label from a variant's attributes,
+// skipping the paired "<Key> Hex" companion values a color picker writes
+// alongside the name — used as this thumbnail's alt text.
+function variantLabel(variant: ProductVariant): string | undefined {
+  const values = Object.entries(variant.attributes || {})
+    .filter(([k]) => !k.toLowerCase().trim().endsWith('hex'))
+    .map(([, v]) => v)
+    .filter(Boolean);
+  return values.length ? values.join(', ') : undefined;
+}
+
 export default function ProductGallery({
   images,
   videos = [],
+  variants = [],
   productName,
   overrideImageUrl,
 }: {
   images: ProductImage[];
   videos?: ProductVideo[];
+  variants?: ProductVariant[];
   productName: string;
   overrideImageUrl?: string;
 }) {
+  const productImages = images.filter((img) => img.url);
+  const seenUrls = new Set(productImages.map((img) => img.url));
+  // Every active variant's own photo joins the strip alongside the product's
+  // general photos — a shopper browsing colors/sizes can see every option's
+  // look without having to pick each one from the panel first. Skips a
+  // variant photo that's identical to one already in the product gallery.
+  const variantImages = variants
+    .filter((v) => v.is_active && v.image_url)
+    .filter((v) => {
+      // Also dedupes two variants that happen to share the exact same photo,
+      // not just against the product's own images.
+      if (seenUrls.has(v.image_url!)) return false;
+      seenUrls.add(v.image_url!);
+      return true;
+    })
+    .map((v): MediaItem => ({ kind: 'image', url: v.image_url!, alt: variantLabel(v) || productName }));
+
   const media: MediaItem[] = [
-    ...images.filter((img) => img.url).map((img): MediaItem => ({ kind: 'image', url: img.url!, alt: img.alt_text })),
+    ...productImages.map((img): MediaItem => ({ kind: 'image', url: img.url!, alt: img.alt_text })),
+    ...variantImages,
     ...videos.filter((vid) => vid.url).map((vid): MediaItem => ({ kind: 'video', url: vid.url!, title: vid.title })),
   ];
 
-  // Default to the image flagged `is_primary` (matching what the product card
-  // shows), not just array index 0 — the admin doesn't necessarily upload the
-  // primary photo first, so this kept opening on a different picture than the
-  // one the shopper clicked from the card.
-  const initialIndex = Math.max(0, images.filter((img) => img.url).findIndex((img) => img.is_primary));
+  const findMediaIndex = (url?: string) => (url ? media.findIndex((m) => m.kind === 'image' && m.url === url) : -1);
+
+  // Land on whichever variant's photo was selected on the way in (see
+  // productUrl's `variant` query param), falling back to the image flagged
+  // `is_primary` (matching what the product card shows) rather than just
+  // array index 0 — the admin doesn't necessarily upload the primary photo
+  // first, so this kept opening on a different picture than the one the
+  // shopper clicked from the card.
+  const initialIndex = (() => {
+    const overrideIdx = findMediaIndex(overrideImageUrl);
+    if (overrideIdx !== -1) return overrideIdx;
+    return Math.max(0, productImages.findIndex((img) => img.is_primary));
+  })();
   const [activeIndex, setActiveIndex] = useState(initialIndex);
+
+  // A shopper picking a different color/size in the panel afterwards should
+  // still jump the gallery to that variant's photo — but once here, thumbnail
+  // clicks browse freely instead of the override permanently pinning one photo
+  // (that used to make every other variant's photo unclickable while any
+  // variant was selected).
+  useEffect(() => {
+    const idx = findMediaIndex(overrideImageUrl);
+    if (idx !== -1) setActiveIndex(idx);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overrideImageUrl]);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   // Portaling to document.body needs a client-side check (SSR has no DOM) —
   // this also sidesteps whatever ancestor was turning our `fixed` lightbox
@@ -66,19 +116,13 @@ export default function ProductGallery({
   };
 
   const activeMedia = media[activeIndex];
-  // A selected variant's own photo takes priority over the gallery selection —
-  // it's what the customer is actually about to buy. Only applies to images;
-  // a variant swap should never silently replace an active video.
-  const activeUrl = overrideImageUrl || (activeMedia?.kind === 'image' ? activeMedia.url : undefined);
-  const activeIsVideo = !overrideImageUrl && activeMedia?.kind === 'video';
+  const activeUrl = activeMedia?.kind === 'image' ? activeMedia.url : undefined;
+  const activeIsVideo = activeMedia?.kind === 'video';
   // Keys the crossfade transition — changes whenever the displayed image does,
   // regardless of whether that came from the thumbnail strip or a variant swap.
-  const activeKey = overrideImageUrl || `idx-${activeIndex}`;
+  const activeKey = `idx-${activeIndex}`;
 
-  // The lightbox always browses the actual gallery, not a variant preview —
-  // otherwise Next/Prev would appear to do nothing whenever overrideImageUrl
-  // is set, since that always wins in activeUrl above.
-  const lightboxMedia = media.length > 0 ? media[activeIndex] : (overrideImageUrl ? ({ kind: 'image', url: overrideImageUrl } as MediaItem) : undefined);
+  const lightboxMedia = media.length > 0 ? media[activeIndex] : undefined;
   const canNavigate = media.length > 1;
   const goNext = useCallback(() => setActiveIndex((i) => (i + 1) % media.length), [media.length]);
   const goPrev = useCallback(() => setActiveIndex((i) => (i - 1 + media.length) % media.length), [media.length]);
@@ -110,24 +154,18 @@ export default function ProductGallery({
           eats too much horizontal space on narrow screens, and there's no
           hover for the magnifier lens anyway, so swipe is the native pattern here. */}
       <div className="md:hidden">
-        {overrideImageUrl ? (
-          <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl bg-[color:var(--cream)]">
-            <Image src={overrideImageUrl} alt={productName} fill unoptimized className="object-cover" />
-          </div>
-        ) : (
-          <MobileMediaGrid
-            media={media}
-            productName={productName}
-            onOpenLightbox={(i) => { setActiveIndex(i); setLightboxOpen(true); }}
-          />
-        )}
+        <MobileMediaGrid
+          media={media}
+          productName={productName}
+          onOpenLightbox={(i) => { setActiveIndex(i); setLightboxOpen(true); }}
+        />
       </div>
 
       <div className="hidden gap-3 md:flex">
         {media.length > 1 && (
           <div className="flex max-h-[560px] w-16 shrink-0 flex-col gap-2 overflow-y-auto">
             {media.map((item, i) => {
-              const isActive = !overrideImageUrl && activeIndex === i;
+              const isActive = activeIndex === i;
               return (
                 <motion.button
                   key={item.url || i}

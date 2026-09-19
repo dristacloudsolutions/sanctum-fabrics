@@ -190,7 +190,8 @@ export function productUrl(product: Pick<Product, 'id' | 'slug'>, variantId?: st
   return variantId ? `${base}?variant=${encodeURIComponent(variantId)}` : base;
 }
 
-export type AttributeFacet = { key: string; label: string; values: string[] };
+export type AttributeFacetValue = { value: string; count: number; hex?: string };
+export type AttributeFacet = { key: string; label: string; values: AttributeFacetValue[] };
 
 /** `color_family` → `Color Family`. */
 function humanizeAttributeKey(key: string): string {
@@ -200,30 +201,62 @@ function humanizeAttributeKey(key: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/** Attribute keys are admin-entered free text, so "Color" on one variant and
+ * "color" (or trailing-space "Color ") on another are meant to be the same
+ * attribute but land as distinct object keys. Every lookup/grouping over
+ * variant attributes should go through this instead of exact-key access —
+ * a case-sensitive lookup was silently excluding products from a color
+ * filter, and splitting one "Color" facet into two, whenever a catalog had
+ * that casing inconsistency. */
+export function getVariantAttribute(variant: ProductVariant, key: string): string | number | undefined {
+  const target = key.trim().toLowerCase();
+  const entry = Object.entries(variant.attributes || {}).find(([k]) => k.trim().toLowerCase() === target);
+  return entry?.[1];
+}
+
 /** Derives the "Color", "Size", "Material", etc. filter groups straight from
  * whatever keys actually appear in this catalog's variant attributes —
  * nothing hardcoded, so a group only shows up if real products have it, and
- * disappears on its own once they don't. */
+ * disappears on its own once they don't. Each value carries how many
+ * distinct products offer it (like "Pink (52380)"), and — for color-style
+ * attributes — the swatch hex to render next to it, either the admin's own
+ * "<Key> Hex" companion value or a lookup by color name. */
 export function buildAttributeFacets(products: Product[]): AttributeFacet[] {
-  const valuesByKey = new Map<string, Set<string>>();
+  type ValueInfo = { productIds: Set<string>; hex?: string };
+  // Lowercased key -> { canonical display-casing key, per-value info }
+  const seen = new Map<string, { canonicalKey: string; valueInfo: Map<string, ValueInfo> }>();
   for (const product of products) {
     for (const variant of product.variants || []) {
-      for (const [key, value] of Object.entries(variant.attributes || {})) {
+      for (const [rawKey, value] of Object.entries(variant.attributes || {})) {
+        const key = rawKey.trim();
         // "<Key> Hex" (e.g. "Color Hex") is a paired swatch value the admin's
         // color picker writes alongside a color name — not a real filterable
         // attribute on its own.
         if (key.toLowerCase().endsWith(' hex')) continue;
         if (value === undefined || value === null || value === '') continue;
-        if (!valuesByKey.has(key)) valuesByKey.set(key, new Set());
-        valuesByKey.get(key)!.add(String(value));
+        const lower = key.toLowerCase();
+        if (!seen.has(lower)) seen.set(lower, { canonicalKey: key, valueInfo: new Map() });
+        const group = seen.get(lower)!;
+        const strValue = String(value);
+        if (!group.valueInfo.has(strValue)) group.valueInfo.set(strValue, { productIds: new Set() });
+        const info = group.valueInfo.get(strValue)!;
+        info.productIds.add(product.id);
+        if (!info.hex) {
+          const hexValue = getVariantAttribute(variant, `${key} Hex`);
+          if (typeof hexValue === 'string' && hexValue) info.hex = hexValue;
+        }
       }
     }
   }
-  return Array.from(valuesByKey.entries())
-    .map(([key, values]) => ({
-      key,
-      label: humanizeAttributeKey(key),
-      values: Array.from(values).sort((a, b) => a.localeCompare(b)),
+  return Array.from(seen.values())
+    .map(({ canonicalKey, valueInfo }) => ({
+      key: canonicalKey,
+      label: humanizeAttributeKey(canonicalKey),
+      values: Array.from(valueInfo.entries())
+        .map(([value, info]) => ({ value, count: info.productIds.size, hex: info.hex }))
+        // Most-available color/size first, like the reference "Pink (52380)"
+        // list — falls back to alphabetical for a tied count.
+        .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value)),
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 }
@@ -284,6 +317,11 @@ function withResolvedImages(product: Product): Product {
     ...product,
     images: product.images?.map((img) => ({ ...img, url: resolveImageUrl(img.url) })),
     videos: product.videos?.map((vid) => ({ ...vid, url: resolveImageUrl(vid.url) })),
+    // Variant photos go through the same CDN/s3:// resolver as product images
+    // — this was missing, so a variant's raw storage path never loaded as an
+    // <img src> on the product card or gallery, only on cart line items
+    // (which already resolve it elsewhere in this file).
+    variants: product.variants?.map((v) => ({ ...v, image_url: resolveImageUrl(v.image_url) })),
   };
 }
 

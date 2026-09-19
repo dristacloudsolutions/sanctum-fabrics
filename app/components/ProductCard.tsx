@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { useEffect, useRef, useState } from 'react';
 import { Heart, Share2 } from 'lucide-react';
 import type { Product } from '@/lib/dristaService';
 import { productUrl } from '@/lib/dristaService';
@@ -9,26 +10,53 @@ import { useAuth } from '@/app/contexts/AuthContext';
 import { useWishlist } from '@/app/contexts/WishlistContext';
 import { formatINR } from '@/lib/format';
 
-const MAX_THUMBS = 3;
+const CAROUSEL_INTERVAL_MS = 900;
 
 export default function ProductCard({ product }: { product: Product }) {
   const { user } = useAuth();
   const { isWishlisted, toggle } = useWishlist();
 
-  const allImages = (product.images ?? []).filter((i) => i.url);
-  // Prefer a variant's own photo when one exists — otherwise the card can show
-  // a picture of e.g. the red variant while the details page opens on
-  // whichever variant happens to be first, with no way to tell the two apart.
-  // Carrying this same variant's id in the link (below) is what makes the
-  // details page open pre-selected to it instead.
+  const productImages = (product.images ?? []).filter((i) => i.url);
+  const primaryUrl = productImages.find((i) => i.is_primary)?.url ?? productImages[0]?.url;
+  // Every photo this card can flip through on hover — the product's own
+  // gallery plus every active variant's own photo, deduped by URL. The
+  // primary/first product photo is pinned to the front so the idle (non-hover)
+  // image always matches what the card opens on.
+  const seenUrls = new Set<string>();
+  const carouselUrls = [
+    ...(primaryUrl ? [primaryUrl] : []),
+    ...productImages.map((i) => i.url!).filter((u) => u !== primaryUrl),
+    ...(product.variants ?? []).filter((v) => v.is_active && v.image_url).map((v) => v.image_url!),
+  ].filter((url) => {
+    if (seenUrls.has(url)) return false;
+    seenUrls.add(url);
+    return true;
+  });
+
+  // The variant whose photo is shown/carouselled — carried through in the
+  // link (see productUrl) so the details page opens pre-selected to it
+  // instead of a different/no variant.
   const featuredVariant = (product.variants ?? []).find((v) => v.is_active && v.image_url);
-  const primary = featuredVariant
-    ? { url: featuredVariant.image_url, is_primary: true, alt_text: product.name }
-    : allImages.find((i) => i.is_primary) ?? allImages[0];
-  const rest = allImages.filter((i) => i !== primary);
-  const thumbs = rest.slice(0, MAX_THUMBS);
-  const overflowCount = rest.length - MAX_THUMBS;
   const linkHref = productUrl(product, featuredVariant?.id);
+
+  const [hovering, setHovering] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (hovering && carouselUrls.length > 1) {
+      intervalRef.current = setInterval(() => {
+        setActiveIndex((i) => (i + 1) % carouselUrls.length);
+      }, CAROUSEL_INTERVAL_MS);
+    } else {
+      setActiveIndex(0);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [hovering, carouselUrls.length]);
+
+  const displayUrl = carouselUrls[activeIndex] ?? carouselUrls[0];
 
   const price = product.selling_price ?? product.base_price;
   const mrp = product.base_price;
@@ -55,6 +83,8 @@ export default function ProductCard({ product }: { product: Product }) {
   return (
     <Link
       href={linkHref}
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
       className="group block overflow-hidden border border-[color:var(--ink)]/8 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-12px_rgba(42,36,32,0.18)]"
     >
       {/* Brand strip */}
@@ -67,48 +97,43 @@ export default function ProductCard({ product }: { product: Product }) {
         </span>
       </div>
 
-      {/* Image block: main + stacked thumbnails, LimeRoad-style */}
-      <div className="relative mt-2.5 flex aspect-[4/5] w-full gap-1 overflow-hidden bg-[color:var(--cream)] px-3">
-        <div className="relative h-full flex-[7] overflow-hidden bg-[color:var(--cream)]">
-          {primary?.url ? (
-            <Image
-              src={primary.url}
-              alt={product.name}
-              fill
-              unoptimized
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-sm text-[color:var(--ink)]/40">
-              No image yet
-            </div>
-          )}
+      {/* Image block: single hero photo — on hover it auto-cycles through
+          every product + variant photo (with pagination dots), and snaps
+          back to the one still image the instant the pointer leaves. */}
+      <div className="relative mt-2.5 aspect-[3/4] w-full overflow-hidden bg-[color:var(--cream)]">
+        {displayUrl ? (
+          <Image
+            key={displayUrl}
+            src={displayUrl}
+            alt={product.name}
+            fill
+            unoptimized
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-[color:var(--ink)]/40">
+            No image yet
+          </div>
+        )}
 
-          {hasDiscount && (
-            <span className="absolute left-0 top-3 rounded-r-full bg-[color:var(--accent)] py-1 pl-2.5 pr-3 text-[11px] font-bold tracking-wide text-white shadow-sm">
-              {discountPct}% OFF
-            </span>
-          )}
-        </div>
+        {hasDiscount && (
+          <span className="absolute left-0 top-3 rounded-r-full bg-[color:var(--accent)] py-1 pl-2.5 pr-3 text-[11px] font-bold tracking-wide text-white shadow-sm">
+            {discountPct}% OFF
+          </span>
+        )}
 
-        {thumbs.length > 0 && (
-          <div className="flex h-full flex-[3] flex-col gap-1">
-            {thumbs.map((img, idx) => {
-              const isLast = idx === thumbs.length - 1;
-              const showOverlay = isLast && overflowCount > 0;
-              return (
-                <div key={img.url ?? idx} className="relative flex-1 overflow-hidden bg-white">
-                  {img.url && (
-                    <Image src={img.url} alt="" fill unoptimized className="object-cover" />
-                  )}
-                  {showOverlay && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-[color:var(--ink)]/60">
-                      <span className="font-serif text-base font-bold text-white">+{overflowCount + 1}</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        {/* Pagination dots — only while actively cycling on hover; the idle
+            card is a single still photo, not something to page through. */}
+        {hovering && carouselUrls.length > 1 && (
+          <div className="absolute inset-x-0 bottom-2.5 flex items-center justify-center gap-1">
+            {carouselUrls.map((url, i) => (
+              <span
+                key={url + i}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === activeIndex ? 'w-3.5 bg-[color:var(--accent)]' : 'w-1.5 bg-white/80'
+                }`}
+              />
+            ))}
           </div>
         )}
       </div>
