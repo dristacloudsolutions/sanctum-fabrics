@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, ZoomIn, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import type { ProductImage, ProductVideo, ProductVariant } from '@/lib/dristaService';
+import SmartFitImage from '../../components/SmartFitImage';
 
 const LENS_SIZE = 160; // px — the magnifier's visible diameter
 const ZOOM_FACTOR = 2.5;
@@ -96,6 +97,13 @@ export default function ProductGallery({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const [isMagnifying, setIsMagnifying] = useState(false);
+  // The magnifier lens maps cursor position straight onto the container's own
+  // rect, which only lines up with the photo when it fills the box
+  // edge-to-edge (`cover`) — once SmartFitImage falls back to `contain` for a
+  // badly-mismatched aspect ratio, the photo no longer fills that rect, so
+  // the lens is disabled for that image instead of magnifying empty padding.
+  const [activeImageFit, setActiveImageFit] = useState<'cover' | 'contain'>('cover');
+  const canMagnify = activeImageFit === 'cover';
   // bgW/bgH are the container's own rendered size × ZOOM_FACTOR — background-size
   // must be expressed in px against that, not a lens-relative %, otherwise the
   // "zoomed" image renders smaller than the real photo (an accidental zoom OUT).
@@ -198,7 +206,7 @@ export default function ProductGallery({
         <div
           ref={mainImageRef}
           className="group relative aspect-[4/5] flex-1 overflow-hidden rounded-2xl bg-[color:var(--cream)]"
-          onMouseEnter={() => !activeIsVideo && setIsMagnifying(true)}
+          onMouseEnter={() => !activeIsVideo && canMagnify && setIsMagnifying(true)}
           onMouseLeave={() => setIsMagnifying(false)}
           onMouseMove={activeIsVideo ? undefined : handleMouseMove}
         >
@@ -221,15 +229,27 @@ export default function ProductGallery({
                     transition={{ duration: 0.35, ease: 'easeOut' }}
                     className="absolute inset-0"
                   >
-                    <Image src={activeUrl} alt={productName} fill unoptimized className="object-cover" />
+                    {/* This catalog mixes portrait product photography with
+                        landscape AI-generated mockups — a fixed object-fit
+                        either crops the landscape ones to an unrecognizable
+                        sliver (`cover`) or leaves a big empty gap (`contain`).
+                        SmartFitImage measures each photo and picks per-image. */}
+                    <SmartFitImage
+                      src={activeUrl}
+                      alt={productName}
+                      boxAspect={4 / 5}
+                      unoptimized
+                      onFitChange={setActiveImageFit}
+                    />
                   </motion.div>
                 )}
               </AnimatePresence>
 
               {/* Magnifier lens — follows the cursor on desktop hover, showing a
                   zoomed-in crop of the exact point under it. Hidden on touch
-                  devices (no hover), where tap-to-open the lightbox still works. */}
-              {isMagnifying && activeUrl && (
+                  devices (no hover), where tap-to-open the lightbox still works,
+                  and on any photo SmartFitImage had to letterbox (see above). */}
+              {isMagnifying && canMagnify && activeUrl && (
                 <div
                   className="pointer-events-none absolute z-10 hidden rounded-full border-2 border-white shadow-[0_4px_24px_rgba(0,0,0,0.35)] lg:block"
                   style={{
@@ -348,7 +368,7 @@ function MobileMediaGrid({
           aria-label={item.kind === 'video' ? `Play video ${i + 1}` : `View image ${i + 1} of ${media.length}`}
         >
           {item.kind === 'image' ? (
-            <Image src={item.url} alt={item.alt || productName} fill unoptimized className="object-cover" />
+            <SmartFitImage src={item.url} alt={item.alt || productName} boxAspect={3 / 4} unoptimized />
           ) : (
             <span className="flex h-full w-full items-center justify-center bg-[color:var(--ink)]/80">
               <Play size={28} className="text-white" fill="white" />

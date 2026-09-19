@@ -9,6 +9,7 @@ import { productUrl } from '@/lib/dristaService';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useWishlist } from '@/app/contexts/WishlistContext';
 import { formatINR } from '@/lib/format';
+import SmartFitImage from './SmartFitImage';
 
 const CAROUSEL_INTERVAL_MS = 900;
 
@@ -112,20 +113,22 @@ export default function ProductCard({
 
       {/* Image block: single hero photo — on hover it auto-cycles through
           this card's photos (with pagination dots), and snaps back to the
-          one still image the instant the pointer leaves. `object-contain`
-          (not `object-cover`) so every photo shows exactly as uploaded —
-          uploads vary in aspect ratio (a close, textural weave shot vs. a
-          full folded-saree shot), and cover-fit was cropping/zooming each
-          one differently depending on its own dimensions. */}
+          one still image the instant the pointer leaves. The catalog mixes
+          portrait product photography with landscape AI-generated mockups
+          (very different aspect ratios), so a fixed object-fit either crops
+          the landscape ones down to an unrecognizable sliver (`cover`) or
+          leaves a big empty gap around them (`contain`) — SmartFitImage picks
+          per-photo based on how close its real aspect ratio is to this card's
+          3:4 box. */}
       <div className="relative mt-2.5 aspect-[3/4] w-full overflow-hidden bg-[color:var(--cream)]">
         {displayUrl ? (
-          <Image
+          <SmartFitImage
             key={displayUrl}
             src={displayUrl}
             alt={displayName}
-            fill
+            boxAspect={3 / 4}
             unoptimized
-            className="object-contain transition-transform duration-500 group-hover:scale-105"
+            className="transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-[color:var(--ink)]/40">
