@@ -24,3 +24,12 @@ body {
 .font-serif {
   font-family: var(--font-playfair), Georgia, serif;
 }
+
+/* Filter accordion — hide the native <details> marker so the custom +/− in
+   ProductsPage's summary rows is the only expand/collapse indicator. */
+.filter-accordion summary::-webkit-details-marker {
+  display: none;
+}
+.filter-accordion summary::marker {
+  content: '';
+}
