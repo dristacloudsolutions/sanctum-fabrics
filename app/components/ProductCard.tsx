@@ -16,10 +16,19 @@ export default function ProductCard({ product }: { product: Product }) {
   const { isWishlisted, toggle } = useWishlist();
 
   const allImages = (product.images ?? []).filter((i) => i.url);
-  const primary = allImages.find((i) => i.is_primary) ?? allImages[0];
+  // Prefer a variant's own photo when one exists — otherwise the card can show
+  // a picture of e.g. the red variant while the details page opens on
+  // whichever variant happens to be first, with no way to tell the two apart.
+  // Carrying this same variant's id in the link (below) is what makes the
+  // details page open pre-selected to it instead.
+  const featuredVariant = (product.variants ?? []).find((v) => v.is_active && v.image_url);
+  const primary = featuredVariant
+    ? { url: featuredVariant.image_url, is_primary: true, alt_text: product.name }
+    : allImages.find((i) => i.is_primary) ?? allImages[0];
   const rest = allImages.filter((i) => i !== primary);
   const thumbs = rest.slice(0, MAX_THUMBS);
   const overflowCount = rest.length - MAX_THUMBS;
+  const linkHref = productUrl(product, featuredVariant?.id);
 
   const price = product.selling_price ?? product.base_price;
   const mrp = product.base_price;
@@ -35,7 +44,7 @@ export default function ProductCard({ product }: { product: Product }) {
 
   const handleShareClick = async (e: React.MouseEvent) => {
     e.preventDefault();
-    const url = typeof window !== 'undefined' ? `${window.location.origin}${productUrl(product)}` : productUrl(product);
+    const url = typeof window !== 'undefined' ? `${window.location.origin}${linkHref}` : linkHref;
     if (typeof navigator !== 'undefined' && navigator.share) {
       navigator.share({ title: product.name, url }).catch(() => {});
     } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -45,7 +54,7 @@ export default function ProductCard({ product }: { product: Product }) {
 
   return (
     <Link
-      href={productUrl(product)}
+      href={linkHref}
       className="group block overflow-hidden border border-[color:var(--ink)]/8 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-12px_rgba(42,36,32,0.18)]"
     >
       {/* Brand strip */}

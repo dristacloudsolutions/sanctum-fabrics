@@ -181,9 +181,13 @@ const DRISTA_API_KEY =
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'e467e2f9-334e-4a90-8d12-d85ac7554fa3';
 
 /** Product detail URL — prefers the SEO-friendly slug, falling back to the
- * raw id for older products that predate slug backfill. */
-export function productUrl(product: Pick<Product, 'id' | 'slug'>): string {
-  return `/products/${product.slug || product.id}`;
+ * raw id for older products that predate slug backfill. When `variantId` is
+ * given (e.g. the variant whose photo was shown on a product card), it's
+ * carried through as a query param so the details page opens on that same
+ * variant instead of defaulting to none/first. */
+export function productUrl(product: Pick<Product, 'id' | 'slug'>, variantId?: string): string {
+  const base = `/products/${product.slug || product.id}`;
+  return variantId ? `${base}?variant=${encodeURIComponent(variantId)}` : base;
 }
 
 export type AttributeFacet = { key: string; label: string; values: string[] };

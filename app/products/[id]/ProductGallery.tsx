@@ -33,7 +33,12 @@ export default function ProductGallery({
     ...videos.filter((vid) => vid.url).map((vid): MediaItem => ({ kind: 'video', url: vid.url!, title: vid.title })),
   ];
 
-  const [activeIndex, setActiveIndex] = useState(0);
+  // Default to the image flagged `is_primary` (matching what the product card
+  // shows), not just array index 0 — the admin doesn't necessarily upload the
+  // primary photo first, so this kept opening on a different picture than the
+  // one the shopper clicked from the card.
+  const initialIndex = Math.max(0, images.filter((img) => img.url).findIndex((img) => img.is_primary));
+  const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   // Portaling to document.body needs a client-side check (SSR has no DOM) —
   // this also sidesteps whatever ancestor was turning our `fixed` lightbox

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { MessageCircle } from 'lucide-react';
 import type { Product } from '@/lib/dristaService';
 import { buildWhatsAppLink, productOrderMessage } from '@/lib/whatsapp';
@@ -10,6 +11,10 @@ import AddToCartPanel from './AddToCartPanel';
 export default function ProductDetailInteractive({ product }: { product: Product }) {
   const [variantImageUrl, setVariantImageUrl] = useState<string | undefined>(undefined);
   const price = product.selling_price ?? product.base_price;
+  // Set on the product card link (see productUrl) so the same variant whose
+  // photo was shown/clicked on the card is what opens pre-selected here,
+  // instead of the shopper landing on no selection / a different variant.
+  const initialVariantId = useSearchParams().get('variant') || undefined;
 
   return (
     <div className="grid gap-10 md:grid-cols-2">
@@ -28,7 +33,7 @@ export default function ProductDetailInteractive({ product }: { product: Product
           <p className="mt-4 leading-relaxed text-[color:var(--ink)]/70">{product.description}</p>
         )}
 
-        <AddToCartPanel product={product} onVariantImageChange={setVariantImageUrl} />
+        <AddToCartPanel product={product} onVariantImageChange={setVariantImageUrl} initialVariantId={initialVariantId} />
 
         <a
           href={buildWhatsAppLink(productOrderMessage(product.name, price))}

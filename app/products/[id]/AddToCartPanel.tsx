@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, Check, Heart } from 'lucide-react';
-import { Product } from '@/lib/dristaService';
+import { Product, ProductVariant } from '@/lib/dristaService';
 import { useCart } from '@/app/contexts/CartContext';
 import { useWishlist } from '@/app/contexts/WishlistContext';
 import { formatINR } from '@/lib/format';
@@ -25,12 +25,29 @@ const COLOR_SWATCHES: Record<string, string> = {
 };
 const colorSwatchHex = (value: string) => COLOR_SWATCHES[value.trim().toLowerCase()];
 
+// Attribute keys are admin-entered free text, so "Color" on one variant and
+// "color" (or trailing-space "Color ") on another are meant to be the same
+// attribute but land as distinct object keys — a case-sensitive lookup was
+// splitting them into two separate "COLOR" rows, each missing the other
+// row's values (rendered as a literal "undefined" chip). Look up attributes
+// case-insensitively (and trimmed) everywhere instead of by exact key.
+const getAttr = (variant: ProductVariant, key: string): string | number | undefined => {
+  const target = key.trim().toLowerCase();
+  const entry = Object.entries(variant.attributes || {}).find(([k]) => k.trim().toLowerCase() === target);
+  return entry?.[1];
+};
+
 export default function AddToCartPanel({
   product,
   onVariantImageChange,
+  initialVariantId,
 }: {
   product: Product;
   onVariantImageChange?: (url: string | undefined) => void;
+  /** Variant to preselect on load — carried through from the product card
+   * link (via productUrl's `variant` query param) so the shopper lands on
+   * the exact same variant whose photo drew them in, not an unselected state. */
+  initialVariantId?: string;
 }) {
   const { cart, addItem } = useCart();
   const { isWishlisted, toggle: toggleWishlist } = useWishlist();
@@ -54,25 +71,41 @@ export default function AddToCartPanel({
   // name (e.g. "Color Hex" next to "Color") — filtered out here so it never
   // shows up as its own pickable row.
   const attributeKeys = useMemo(() => {
-    const keys = new Set<string>();
+    const seen = new Map<string, string>(); // lowercased key -> first-seen display casing
     variants.forEach((v) => Object.keys(v.attributes || {}).forEach((k) => {
-      if (!k.toLowerCase().endsWith(' hex')) keys.add(k);
+      const lower = k.trim().toLowerCase();
+      if (lower.endsWith(' hex')) return;
+      if (!seen.has(lower)) seen.set(lower, k.trim());
     }));
-    return Array.from(keys);
+    return Array.from(seen.values());
   }, [variants]);
 
-  const [selected, setSelected] = useState<Record<string, string>>({});
+  const [selected, setSelected] = useState<Record<string, string>>(() => {
+    const initialVariant = initialVariantId ? variants.find((v) => v.id === initialVariantId) : undefined;
+    if (!initialVariant) return {};
+    const picked: Record<string, string> = {};
+    attributeKeys.forEach((key) => {
+      const value = getAttr(initialVariant, key);
+      if (value !== undefined && value !== null && value !== '') picked[key] = String(value);
+    });
+    return picked;
+  });
   const [quantity, setQuantity] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
 
-  const valuesFor = (key: string) => Array.from(new Set(variants.map((v) => String(v.attributes?.[key])).filter(Boolean)));
+  const valuesFor = (key: string) => Array.from(new Set(
+    variants
+      .map((v) => getAttr(v, key))
+      .filter((v) => v !== undefined && v !== null && v !== '')
+      .map(String)
+  ));
 
   const matchedVariant = useMemo(() => {
     if (variants.length === 0) return null;
     if (attributeKeys.some((k) => !selected[k])) return null;
-    return variants.find((v) => attributeKeys.every((k) => String(v.attributes?.[k]) === selected[k])) || null;
+    return variants.find((v) => attributeKeys.every((k) => String(getAttr(v, k)) === selected[k])) || null;
   }, [variants, attributeKeys, selected]);
 
   useEffect(() => {
@@ -145,12 +178,13 @@ export default function AddToCartPanel({
                 // Representative variant for this color, independent of any other
                 // attribute (length, size, ...) they've picked so far, since that
                 // hasn't necessarily been chosen yet.
-                const repVariant = variants.find((v) => String(v.attributes?.[key]) === value);
+                const repVariant = variants.find((v) => String(getAttr(v, key)) === value);
                 // The admin's color picker stores the exact hex alongside the name
                 // as "<Key> Hex" — prefer that over guessing from the name via the
                 // local COLOR_SWATCHES map, which only covers names it knows about.
+                const hex = repVariant ? getAttr(repVariant, `${key} Hex`) : undefined;
                 const swatch = isColorAttribute
-                  ? (repVariant?.attributes?.[`${key} Hex`] as string | undefined) || colorSwatchHex(value)
+                  ? (typeof hex === 'string' ? hex : undefined) || colorSwatchHex(value)
                   : undefined;
 
                 if (swatch) {

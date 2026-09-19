@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { MessageCircle } from 'lucide-react';
@@ -23,7 +24,20 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="mx-auto max-w-6xl px-5 pb-16 pt-6">
       {liveProduct ? (
-        <ProductDetailInteractive product={liveProduct} />
+        <Suspense
+          fallback={
+            <div className="grid gap-10 md:grid-cols-2">
+              <div className="aspect-[4/5] w-full animate-pulse rounded-2xl bg-[color:var(--cream)]" />
+              <div className="space-y-4">
+                <div className="h-8 w-2/3 animate-pulse rounded bg-[color:var(--cream)]" />
+                <div className="h-4 w-full animate-pulse rounded bg-[color:var(--cream)]" />
+                <div className="h-4 w-5/6 animate-pulse rounded bg-[color:var(--cream)]" />
+              </div>
+            </div>
+          }
+        >
+          <ProductDetailInteractive product={liveProduct} />
+        </Suspense>
       ) : (
         <SampleProductDetail product={product} />
       )}
