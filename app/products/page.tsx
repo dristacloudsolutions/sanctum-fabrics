@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
-import { getProducts, getCategoryHierarchy, buildAttributeFacets, getVariantAttribute, type Product, type AttributeFacet, type AttributeFacetValue } from '@/lib/dristaService';
+import { getProducts, getCategoryHierarchy, buildAttributeFacets, getVariantAttribute, expandProductsByColor, type Product, type AttributeFacet, type AttributeFacetValue } from '@/lib/dristaService';
 import { colorSwatchHex } from '@/lib/colorSwatches';
 import { sampleProducts } from '@/lib/sampleProducts';
 
@@ -117,11 +117,14 @@ export default async function ProductsPage({
   const paramsAsRecord = params as Record<string, string | string[] | undefined>;
   const isAttrChecked = (key: string, value: string) => toValueList(paramsAsRecord[`attr_${key}`]).includes(value);
 
+  // Each product-color combination gets its own card — see expandProductsByColor.
+  const cardEntries = expandProductsByColor(products);
+
   return (
     <div className="mx-auto max-w-7xl px-5 pb-16 pt-8">
       <div className="mb-8">
         <p className="text-sm text-[color:var(--ink)]/60">
-          {products.length} piece{products.length === 1 ? '' : 's'} available
+          {cardEntries.length} piece{cardEntries.length === 1 ? '' : 's'} available
         </p>
         {categoryFallback && (
           <p className="mt-1 text-xs text-[color:var(--ink)]/50">
@@ -318,9 +321,9 @@ export default async function ProductsPage({
             </p>
           ) : (
             <div className="flex flex-wrap gap-4">
-              {products.map((product) => (
-                <div key={product.id} className="w-[180px] sm:w-[210px] lg:w-[240px]">
-                  <ProductCard product={product} />
+              {cardEntries.map((entry) => (
+                <div key={`${entry.product.id}-${entry.variant?.id ?? 'base'}`} className="w-[180px] sm:w-[210px] lg:w-[240px]">
+                  <ProductCard product={entry.product} variant={entry.variant} colorLabel={entry.colorLabel} />
                 </div>
               ))}
             </div>

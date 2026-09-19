@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { Heart, Share2 } from 'lucide-react';
-import type { Product } from '@/lib/dristaService';
+import type { Product, ProductVariant } from '@/lib/dristaService';
 import { productUrl } from '@/lib/dristaService';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useWishlist } from '@/app/contexts/WishlistContext';
@@ -12,32 +12,45 @@ import { formatINR } from '@/lib/format';
 
 const CAROUSEL_INTERVAL_MS = 900;
 
-export default function ProductCard({ product }: { product: Product }) {
+export default function ProductCard({
+  product,
+  variant,
+  colorLabel,
+}: {
+  product: Product;
+  /** The one color this card represents — see expandProductsByColor. When
+   * given, the card shows and links to this variant specifically, instead of
+   * cycling through every color the product has. */
+  variant?: ProductVariant;
+  colorLabel?: string;
+}) {
   const { user } = useAuth();
   const { isWishlisted, toggle } = useWishlist();
 
   const productImages = (product.images ?? []).filter((i) => i.url);
   const primaryUrl = productImages.find((i) => i.is_primary)?.url ?? productImages[0]?.url;
-  // Every photo this card can flip through on hover — the product's own
-  // gallery plus every active variant's own photo, deduped by URL. The
-  // primary/first product photo is pinned to the front so the idle (non-hover)
-  // image always matches what the card opens on.
   const seenUrls = new Set<string>();
-  const carouselUrls = [
-    ...(primaryUrl ? [primaryUrl] : []),
-    ...productImages.map((i) => i.url!).filter((u) => u !== primaryUrl),
-    ...(product.variants ?? []).filter((v) => v.is_active && v.image_url).map((v) => v.image_url!),
-  ].filter((url) => {
+  const carouselUrls = (
+    variant?.image_url
+      // A color-specific card cycles through that color's own photo plus the
+      // product's shared/general photos only — other colors' photos belong
+      // to their own separate cards now, not mixed into this one.
+      ? [variant.image_url, ...productImages.map((i) => i.url!)]
+      : [
+          ...(primaryUrl ? [primaryUrl] : []),
+          ...productImages.map((i) => i.url!).filter((u) => u !== primaryUrl),
+          ...(product.variants ?? []).filter((v) => v.is_active && v.image_url).map((v) => v.image_url!),
+        ]
+  ).filter((url) => {
     if (seenUrls.has(url)) return false;
     seenUrls.add(url);
     return true;
   });
 
-  // The variant whose photo is shown/carouselled — carried through in the
-  // link (see productUrl) so the details page opens pre-selected to it
-  // instead of a different/no variant.
-  const featuredVariant = (product.variants ?? []).find((v) => v.is_active && v.image_url);
-  const linkHref = productUrl(product, featuredVariant?.id);
+  // Carries this specific variant through the link (see productUrl) so the
+  // details page opens pre-selected to the same color shown here.
+  const linkHref = productUrl(product, variant?.id);
+  const displayName = colorLabel ? `${product.name} - ${colorLabel}` : product.name;
 
   const [hovering, setHovering] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -58,7 +71,7 @@ export default function ProductCard({ product }: { product: Product }) {
 
   const displayUrl = carouselUrls[activeIndex] ?? carouselUrls[0];
 
-  const price = product.selling_price ?? product.base_price;
+  const price = variant?.selling_price ?? product.selling_price ?? product.base_price;
   const mrp = product.base_price;
   const hasDiscount = mrp !== undefined && price !== undefined && mrp > price;
   const discountPct = hasDiscount ? Math.round(((mrp! - price!) / mrp!) * 100) : 0;
@@ -74,7 +87,7 @@ export default function ProductCard({ product }: { product: Product }) {
     e.preventDefault();
     const url = typeof window !== 'undefined' ? `${window.location.origin}${linkHref}` : linkHref;
     if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator.share({ title: product.name, url }).catch(() => {});
+      navigator.share({ title: displayName, url }).catch(() => {});
     } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(url).catch(() => {});
     }
@@ -98,14 +111,14 @@ export default function ProductCard({ product }: { product: Product }) {
       </div>
 
       {/* Image block: single hero photo — on hover it auto-cycles through
-          every product + variant photo (with pagination dots), and snaps
-          back to the one still image the instant the pointer leaves. */}
+          this card's photos (with pagination dots), and snaps back to the
+          one still image the instant the pointer leaves. */}
       <div className="relative mt-2.5 aspect-[3/4] w-full overflow-hidden bg-[color:var(--cream)]">
         {displayUrl ? (
           <Image
             key={displayUrl}
             src={displayUrl}
-            alt={product.name}
+            alt={displayName}
             fill
             unoptimized
             className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -140,7 +153,7 @@ export default function ProductCard({ product }: { product: Product }) {
 
       {/* Details */}
       <div className="px-3.5 pb-3.5 pt-2.5">
-        <h3 className="line-clamp-2 font-serif text-sm leading-snug text-[color:var(--ink)]">{product.name}</h3>
+        <h3 className="line-clamp-2 font-serif text-sm leading-snug text-[color:var(--ink)]">{displayName}</h3>
         {price !== undefined && (
           <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <p className="text-base font-bold text-[color:var(--ink)]">₹{formatINR(price)}</p>

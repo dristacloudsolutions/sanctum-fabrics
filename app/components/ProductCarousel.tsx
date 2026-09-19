@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import ProductCard from './ProductCard';
-import type { Product } from '@/lib/dristaService';
+import { expandProductsByColor, type Product } from '@/lib/dristaService';
 
 const AUTO_SCROLL_INTERVAL_MS = 3000;
 const RESUME_AFTER_INTERACTION_MS = 5000;
 
 export default function ProductCarousel({ products }: { products: Product[] }) {
+  // Each product-color combination gets its own card — see expandProductsByColor.
+  const entries = expandProductsByColor(products);
   const trackRef = useRef<HTMLDivElement>(null);
   const dirRef = useRef<1 | -1>(1);
   const resumeTimeoutRef = useRef<number | undefined>(undefined);
@@ -33,7 +35,7 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
   };
 
   useEffect(() => {
-    if (paused || products.length <= 3) return;
+    if (paused || entries.length <= 3) return;
     const id = window.setInterval(() => {
       const track = trackRef.current;
       if (!track) return;
@@ -43,7 +45,7 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
       scrollBy(dirRef.current);
     }, AUTO_SCROLL_INTERVAL_MS);
     return () => window.clearInterval(id);
-  }, [paused, products.length]);
+  }, [paused, entries.length]);
 
   return (
     <div
@@ -53,14 +55,14 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
       onTouchStart={() => pauseThenResume()}
     >
       <div ref={trackRef} className="flex gap-4 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {products.map((product) => (
-          <div key={product.id} className="w-[60%] shrink-0 sm:w-[38%] lg:w-[23%]">
-            <ProductCard product={product} />
+        {entries.map((entry) => (
+          <div key={`${entry.product.id}-${entry.variant?.id ?? 'base'}`} className="w-[60%] shrink-0 sm:w-[38%] lg:w-[23%]">
+            <ProductCard product={entry.product} variant={entry.variant} colorLabel={entry.colorLabel} />
           </div>
         ))}
       </div>
 
-      {products.length > 3 && (
+      {entries.length > 3 && (
         <>
           <button
             type="button"

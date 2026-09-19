@@ -5,7 +5,7 @@ import ProductCard from './components/ProductCard';
 import ProductCarousel from './components/ProductCarousel';
 import Reveal from './components/Reveal';
 import config from './config/config';
-import { getProducts } from '@/lib/dristaService';
+import { getProducts, expandProductsByColor } from '@/lib/dristaService';
 import { sampleProducts } from '@/lib/sampleProducts';
 import { buildWhatsAppLink } from '@/lib/whatsapp';
 
@@ -30,7 +30,8 @@ export const dynamic = 'force-dynamic';
 export default async function Home() {
   const liveProducts = await getProducts();
   const products = liveProducts.length > 0 ? liveProducts : sampleProducts;
-  const featured = products.slice(0, 3);
+  // Each product-color combination gets its own card — see expandProductsByColor.
+  const featured = expandProductsByColor(products).slice(0, 3);
   const newArrivals = products.slice(0, 6);
   const usingSample = liveProducts.length === 0;
 
@@ -119,10 +120,10 @@ export default async function Home() {
           </div>
         </Reveal>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
-          {featured.map((product, i) => (
-            <div key={product.id} className="mx-auto w-full max-w-md sm:max-w-none">
+          {featured.map((entry, i) => (
+            <div key={`${entry.product.id}-${entry.variant?.id ?? 'base'}`} className="mx-auto w-full max-w-md sm:max-w-none">
               <Reveal delay={Math.min(i, 3) * 0.08}>
-                <ProductCard product={product} />
+                <ProductCard product={entry.product} variant={entry.variant} colorLabel={entry.colorLabel} />
               </Reveal>
             </div>
           ))}

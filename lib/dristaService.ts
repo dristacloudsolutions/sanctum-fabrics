@@ -180,13 +180,16 @@ const DRISTA_API_KEY =
   'dr_live_pk_465f2737_6e54f434b85b9933d015626baf04413d44338bdb';
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'e467e2f9-334e-4a90-8d12-d85ac7554fa3';
 
-/** Product detail URL — prefers the SEO-friendly slug, falling back to the
- * raw id for older products that predate slug backfill. When `variantId` is
- * given (e.g. the variant whose photo was shown on a product card), it's
- * carried through as a query param so the details page opens on that same
- * variant instead of defaulting to none/first. */
-export function productUrl(product: Pick<Product, 'id' | 'slug'>, variantId?: string): string {
-  const base = `/products/${product.slug || product.id}`;
+/** Product detail URL — prefers the item_code (checked for uniqueness on
+ * every create/update on the backend), then the slug (which a bulk import or
+ * seed script has in the past produced duplicates of — two items sharing a
+ * slug made the details page non-deterministically open the wrong one),
+ * falling back to the raw id as a last resort. When `variantId` is given
+ * (e.g. the variant whose photo was shown on a product card), it's carried
+ * through as a query param so the details page opens on that same variant
+ * instead of defaulting to none/first. */
+export function productUrl(product: Pick<Product, 'id' | 'slug' | 'item_code'>, variantId?: string): string {
+  const base = `/products/${product.item_code || product.slug || product.id}`;
   return variantId ? `${base}?variant=${encodeURIComponent(variantId)}` : base;
 }
 
@@ -212,6 +215,55 @@ export function getVariantAttribute(variant: ProductVariant, key: string): strin
   const target = key.trim().toLowerCase();
   const entry = Object.entries(variant.attributes || {}).find(([k]) => k.trim().toLowerCase() === target);
   return entry?.[1];
+}
+
+/** One card's worth of product to render — either a whole product (no color
+ * variants to split by) or one specific color of a product. */
+export type ProductCardEntry = { product: Product; variant?: ProductVariant; colorLabel?: string };
+
+/** The client wants every "product name + color" combination shown as its
+ * own card, not one card per product with all its colors hidden behind a
+ * hover carousel — e.g. a saree in Teal Green and Brick Red becomes two
+ * separate cards, "Banarasi Silk Saree - Teal Green" and "... - Brick Red".
+ * A product with no color attribute (or no active/photographed variants)
+ * still renders as a single card, unchanged. */
+export function expandProductsByColor(products: Product[]): ProductCardEntry[] {
+  const entries: ProductCardEntry[] = [];
+  for (const product of products) {
+    const variants = (product.variants || []).filter((v) => v.is_active);
+    const colorKey = variants
+      .flatMap((v) => Object.keys(v.attributes || {}))
+      .find((k) => k.trim().toLowerCase() === 'color');
+
+    if (!colorKey || variants.length === 0) {
+      entries.push({ product });
+      continue;
+    }
+
+    // One representative variant per distinct color (case-insensitive, same
+    // as the color filter/facets) — prefers whichever variant of that color
+    // actually has its own photo.
+    const byColor = new Map<string, ProductVariant>();
+    for (const variant of variants) {
+      const colorValue = getVariantAttribute(variant, colorKey);
+      if (colorValue === undefined || colorValue === null || colorValue === '') continue;
+      const key = String(colorValue).trim().toLowerCase();
+      const existing = byColor.get(key);
+      if (!existing || (!existing.image_url && variant.image_url)) {
+        byColor.set(key, variant);
+      }
+    }
+
+    if (byColor.size === 0) {
+      entries.push({ product });
+      continue;
+    }
+    for (const variant of byColor.values()) {
+      const colorLabel = String(getVariantAttribute(variant, colorKey));
+      entries.push({ product, variant, colorLabel });
+    }
+  }
+  return entries;
 }
 
 /** Derives the "Color", "Size", "Material", etc. filter groups straight from
