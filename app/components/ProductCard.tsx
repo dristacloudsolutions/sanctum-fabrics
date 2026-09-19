@@ -112,7 +112,11 @@ export default function ProductCard({
 
       {/* Image block: single hero photo — on hover it auto-cycles through
           this card's photos (with pagination dots), and snaps back to the
-          one still image the instant the pointer leaves. */}
+          one still image the instant the pointer leaves. `object-contain`
+          (not `object-cover`) so every photo shows exactly as uploaded —
+          uploads vary in aspect ratio (a close, textural weave shot vs. a
+          full folded-saree shot), and cover-fit was cropping/zooming each
+          one differently depending on its own dimensions. */}
       <div className="relative mt-2.5 aspect-[3/4] w-full overflow-hidden bg-[color:var(--cream)]">
         {displayUrl ? (
           <Image
@@ -121,7 +125,7 @@ export default function ProductCard({
             alt={displayName}
             fill
             unoptimized
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            className="object-contain transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-[color:var(--ink)]/40">

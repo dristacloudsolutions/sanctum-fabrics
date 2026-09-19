@@ -217,6 +217,15 @@ export function getVariantAttribute(variant: ProductVariant, key: string): strin
   return entry?.[1];
 }
 
+/** "BURGUNDY" / "royal blue" → "Burgundy" / "Royal Blue" — admin-entered
+ * color names come in whatever casing was typed, but the storefront always
+ * displays them Title Case (e.g. "Silk Saree - Red", not "- RED"). */
+function toTitleCase(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 /** One card's worth of product to render — either a whole product (no color
  * variants to split by) or one specific color of a product. */
 export type ProductCardEntry = { product: Product; variant?: ProductVariant; colorLabel?: string };
@@ -259,7 +268,7 @@ export function expandProductsByColor(products: Product[]): ProductCardEntry[] {
       continue;
     }
     for (const variant of byColor.values()) {
-      const colorLabel = String(getVariantAttribute(variant, colorKey));
+      const colorLabel = toTitleCase(String(getVariantAttribute(variant, colorKey)));
       entries.push({ product, variant, colorLabel });
     }
   }
