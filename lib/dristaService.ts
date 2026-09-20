@@ -220,7 +220,7 @@ export function getVariantAttribute(variant: ProductVariant, key: string): strin
 /** "BURGUNDY" / "royal blue" → "Burgundy" / "Royal Blue" — admin-entered
  * color names come in whatever casing was typed, but the storefront always
  * displays them Title Case (e.g. "Silk Saree - Red", not "- RED"). */
-function toTitleCase(value: string): string {
+export function toTitleCase(value: string): string {
   return value
     .toLowerCase()
     .replace(/\b\w/g, (c) => c.toUpperCase());

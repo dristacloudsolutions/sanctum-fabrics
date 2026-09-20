@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
-import { getProducts, getCategoryHierarchy, buildAttributeFacets, getVariantAttribute, expandProductsByColor, type Product, type AttributeFacet, type AttributeFacetValue } from '@/lib/dristaService';
+import { getProducts, getCategoryHierarchy, buildAttributeFacets, getVariantAttribute, expandProductsByColor, toTitleCase, type Product, type AttributeFacet, type AttributeFacetValue } from '@/lib/dristaService';
 import { colorSwatchHex } from '@/lib/colorSwatches';
 import { sampleProducts } from '@/lib/sampleProducts';
 
@@ -357,14 +357,17 @@ function ColorSwatchRow({
   isChecked: boolean;
 }) {
   return (
-    <label className="flex items-center gap-2.5 text-sm text-[color:var(--ink)]/80">
+    <label className="flex items-center gap-2.5 text-xs text-[color:var(--ink)]/80">
       <input type="checkbox" name={`attr_${facetKey}`} value={value.value} defaultChecked={isChecked} />
       {hex ? (
         <span className="h-5 w-5 shrink-0 rounded-full ring-1 ring-black/10" style={{ backgroundColor: hex }} />
       ) : (
         <span className="h-5 w-5 shrink-0 rounded-full bg-[color:var(--cream)] ring-1 ring-black/10" />
       )}
-      <span>{value.value}</span>
+      {/* Displayed Title Case ("Red Wine") regardless of how the admin typed
+          it — the underlying value/casing (used for the checkbox value and
+          filter matching) is left untouched. */}
+      <span>{toTitleCase(value.value)}</span>
       <span className="text-[color:var(--ink)]/40">({value.count})</span>
     </label>
   );
