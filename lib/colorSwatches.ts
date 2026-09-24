@@ -17,3 +17,10 @@ export const COLOR_SWATCHES: Record<string, string> = {
 };
 
 export const colorSwatchHex = (value: string): string | undefined => COLOR_SWATCHES[value.trim().toLowerCase()];
+
+// A variant's Color value (and its paired "Color Hex") can hold more than one
+// color as a comma-separated list — e.g. a multicolor print item — set by the
+// admin's multi-color picker. Splits that back into individual names/hexes,
+// positionally matched, for swatch rendering.
+export const splitColorList = (value: string): string[] =>
+  value.split(',').map((v) => v.trim()).filter(Boolean);

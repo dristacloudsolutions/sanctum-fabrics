@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, Check, Heart } from 'lucide-react';
 import { Product, getVariantAttribute } from '@/lib/dristaService';
-import { colorSwatchHex } from '@/lib/colorSwatches';
+import { colorSwatchHex, splitColorList } from '@/lib/colorSwatches';
 import { useCart } from '@/app/contexts/CartContext';
 import { useWishlist } from '@/app/contexts/WishlistContext';
 import { formatINR } from '@/lib/format';
@@ -159,12 +159,14 @@ export default function AddToCartPanel({
                 // The admin's color picker stores the exact hex alongside the name
                 // as "<Key> Hex" — prefer that over guessing from the name via the
                 // local COLOR_SWATCHES map, which only covers names it knows about.
-                const hex = repVariant ? getAttr(repVariant, `${key} Hex`) : undefined;
-                const swatch = isColorAttribute
-                  ? (typeof hex === 'string' ? hex : undefined) || colorSwatchHex(value)
-                  : undefined;
+                // Either side can hold a comma-separated list (a multicolor print
+                // item, one SKU with several colors) — splitColorList handles both
+                // the single- and multi-color case identically.
+                const hexRaw = repVariant ? getAttr(repVariant, `${key} Hex`) : undefined;
+                const colorNames = isColorAttribute ? splitColorList(value) : [];
+                const colorHexes = isColorAttribute && typeof hexRaw === 'string' ? splitColorList(hexRaw) : [];
 
-                if (swatch) {
+                if (colorNames.length > 0) {
                   const repSku = repVariant?.sku;
                   return (
                     <button
@@ -175,12 +177,20 @@ export default function AddToCartPanel({
                       title={repSku ? `${value} — ${repSku}` : value}
                       className="flex flex-col items-center gap-1"
                     >
-                      <span
-                        className={`h-9 w-9 rounded-full ring-offset-2 transition-all ${
-                          isSelected ? 'ring-2 ring-[color:var(--accent)]' : 'ring-1 ring-[color:var(--border)] hover:ring-[color:var(--ink)]/40'
-                        }`}
-                        style={{ backgroundColor: swatch }}
-                      />
+                      <span className="flex items-center">
+                        {colorNames.map((name, i) => (
+                          <span
+                            key={i}
+                            className={`h-9 w-9 rounded-full ring-offset-2 transition-all ${
+                              isSelected ? 'ring-2 ring-[color:var(--accent)]' : 'ring-1 ring-[color:var(--border)] hover:ring-[color:var(--ink)]/40'
+                            }`}
+                            style={{
+                              backgroundColor: colorHexes[i] || colorSwatchHex(name) || '#D4D4D4',
+                              marginLeft: i > 0 ? '-14px' : 0,
+                            }}
+                          />
+                        ))}
+                      </span>
                       <span className={`max-w-[4.5rem] truncate text-[10px] font-medium ${isSelected ? 'text-[color:var(--ink)]/80' : 'text-[color:var(--ink)]/50'}`}>
                         {value}
                       </span>

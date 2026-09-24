@@ -45,7 +45,7 @@ export type CartLineItem = {
   item_id: string;
   variant_id?: string;
   quantity: number;
-  item?: { id: string; name: string; selling_price: number; sku?: string; slug?: string };
+  item?: { id: string; name: string; selling_price: number; sku?: string; slug?: string; images?: ProductImage[] };
   variant?: { id: string; sku: string; attributes: Record<string, any>; selling_price: number; image_url?: string };
 };
 
@@ -613,17 +613,30 @@ export async function deleteCustomerAddress(id: string, token: string): Promise<
   await dristaAction(`/v1/ecommerce/addresses/${id}`, { method: 'DELETE', token });
 }
 
+function hydrateCartImages(cart: Cart | null): Cart | null {
+  if (!cart) return null;
+  for (const item of cart.items || []) {
+    if (item.variant?.image_url) item.variant.image_url = resolveImageUrl(item.variant.image_url);
+    if ((item.item as any)?.images && Array.isArray((item.item as any).images)) {
+      (item.item as any).images = (item.item as any).images.map((img: any) => ({
+        ...img,
+        url: resolveImageUrl(img.url) || img.url,
+      }));
+    }
+  }
+  return cart;
+}
+
 // Returns null (rather than throwing) when the cart id doesn't resolve to a real
 // cart — e.g. a stale sanctum_cart_id cookie left over from a cart that no longer
 // exists. Callers should treat null as "start a new cart", not as an error.
 export async function getCart(cartId: string, token?: string): Promise<Cart | null> {
-  const payload = await dristaAction(`/v1/ecommerce/cart/${cartId}`, { token });
-  const cart = payload.data as Cart | null;
-  if (!cart) return null;
-  for (const item of cart.items || []) {
-    if (item.variant?.image_url) item.variant.image_url = resolveImageUrl(item.variant.image_url);
+  try {
+    const payload = await dristaAction(`/v1/ecommerce/cart/${cartId}`, { token });
+    return hydrateCartImages(payload.data as Cart | null);
+  } catch {
+    return null;
   }
-  return cart;
 }
 
 export async function addToCart(cartId: string, itemId: string, quantity: number, variantId?: string, token?: string) {
@@ -641,23 +654,13 @@ export async function updateCartItemQuantity(cartId: string, itemId: string, qua
     body: JSON.stringify({ quantity, variantId }),
     token,
   });
-  const cart = payload.data as Cart | null;
-  if (!cart) return null;
-  for (const item of cart.items || []) {
-    if (item.variant?.image_url) item.variant.image_url = resolveImageUrl(item.variant.image_url);
-  }
-  return cart;
+  return hydrateCartImages(payload.data as Cart | null);
 }
 
 export async function removeCartItem(cartId: string, itemId: string, variantId?: string, token?: string): Promise<Cart | null> {
   const qs = variantId ? `?variantId=${encodeURIComponent(variantId)}` : '';
   const payload = await dristaAction(`/v1/ecommerce/cart/${cartId}/items/${itemId}${qs}`, { method: 'DELETE', token });
-  const cart = payload.data as Cart | null;
-  if (!cart) return null;
-  for (const item of cart.items || []) {
-    if (item.variant?.image_url) item.variant.image_url = resolveImageUrl(item.variant.image_url);
-  }
-  return cart;
+  return hydrateCartImages(payload.data as Cart | null);
 }
 
 export async function validateCoupon(cartId: string, code: string, token?: string): Promise<CouponPreview> {

@@ -47,6 +47,7 @@ export default function CartPage() {
 
   // Updating item tracking
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
+  const [itemError, setItemError] = useState<string | null>(null);
 
   // Dynamic promotions fetched from backend API
   const [availablePromotions, setAvailablePromotions] = useState<Promotion[]>([]);
@@ -82,7 +83,9 @@ export default function CartPage() {
 
   // Free shipping progress calculation
   const amountNeededForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
-  const shippingProgress = Math.min(100, Math.round((subtotal / FREE_SHIPPING_THRESHOLD) * 100));
+  const shippingProgress = FREE_SHIPPING_THRESHOLD > 0
+    ? Math.min(100, Math.round((subtotal / FREE_SHIPPING_THRESHOLD) * 100))
+    : 100;
 
   const applyCoupon = async (codeToApply?: string) => {
     const code = (codeToApply || couponCode).trim().toUpperCase();
@@ -151,8 +154,11 @@ export default function CartPage() {
 
   const handleQuantityChange = async (itemId: string, newQty: number, variantId?: string) => {
     setUpdatingItemId(itemId);
+    setItemError(null);
     try {
       await updateQuantity(itemId, newQty, variantId);
+    } catch (err: any) {
+      setItemError(err.message || 'Failed to update item quantity');
     } finally {
       setUpdatingItemId(null);
     }
@@ -294,6 +300,18 @@ export default function CartPage() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           {/* Left Column: Line Items (8 Cols) */}
           <div className="lg:col-span-8 space-y-4">
+            {itemError && (
+              <div className="flex items-center justify-between rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-xs">
+                <span>{itemError}</span>
+                <button
+                  type="button"
+                  onClick={() => setItemError(null)}
+                  className="rounded-full p-1 text-red-500 hover:bg-red-100 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
             <div className="rounded-3xl border border-[color:var(--border)] bg-white p-6 shadow-xs">
               <div className="flex items-center justify-between border-b border-[color:var(--border)] pb-4">
                 <span className="text-xs font-bold uppercase tracking-wider text-[color:var(--ink)]/50">
@@ -308,7 +326,10 @@ export default function CartPage() {
                 {items.map((item) => {
                   const unitPrice = item.variant?.selling_price ?? item.item?.selling_price ?? 0;
                   const itemTotal = unitPrice * item.quantity;
-                  const imageUrl = item.variant?.image_url;
+                  const imageUrl =
+                    item.variant?.image_url ||
+                    item.item?.images?.find((i) => i.is_primary)?.url ||
+                    item.item?.images?.[0]?.url;
                   const isUpdating = updatingItemId === item.item_id;
 
                   return (

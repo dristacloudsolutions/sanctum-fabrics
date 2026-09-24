@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useEffect, useCallback } from 'react';
+import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -56,7 +56,7 @@ declare global {
 
 function CheckoutForm() {
   const { user } = useAuth();
-  const { cart, refresh } = useCart();
+  const { cart, refresh, loading: cartLoading } = useCart();
   const router = useRouter();
   const searchParams = useSearchParams();
   const couponFromUrl = searchParams.get('coupon') || '';
@@ -74,10 +74,21 @@ function CheckoutForm() {
     country: 'India',
   });
   const [phone, setPhone] = useState(user?.phone || '');
+  const hasAutoPrompted = useRef(false);
 
-  // Guest details
-  const [guestName, setGuestName] = useState('');
-  const [guestEmail, setGuestEmail] = useState('');
+  // Auto-populate phone and prompt login modal if user is not logged in
+  useEffect(() => {
+    if (user?.phone && !phone) {
+      setPhone(user.phone);
+    }
+  }, [user, phone]);
+
+  useEffect(() => {
+    if (!user && !hasAutoPrompted.current) {
+      hasAutoPrompted.current = true;
+      setAuthModalOpen(true);
+    }
+  }, [user]);
 
   // GST details
   const [showGstField, setShowGstField] = useState(false);
@@ -232,6 +243,11 @@ function CheckoutForm() {
 
   const handleContinueToPayment = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      setError('Please sign in or register to place your order.');
+      setAuthModalOpen(true);
+      return;
+    }
     if (!activePhone || activePhone.trim().length < 10) {
       setError('Please provide a valid 10-digit delivery phone number');
       return;
@@ -246,6 +262,11 @@ function CheckoutForm() {
   };
 
   const handlePlaceOrder = async () => {
+    if (!user) {
+      setError('Please sign in or register to place your order.');
+      setAuthModalOpen(true);
+      return;
+    }
     setPlacing(true);
     setError(null);
     try {
@@ -261,11 +282,6 @@ function CheckoutForm() {
           shipping_option_id: selectedOptionId || (shippingOptions.length > 0 ? shippingOptions[0].optionId : undefined),
           gstin: gstin.trim() || undefined,
           payment_method: paymentMethod,
-          ...(!user && {
-            guest_name: guestName.trim(),
-            guest_email: guestEmail.trim() || undefined,
-            guest_phone: activePhone.trim(),
-          }),
         }),
       });
 
@@ -302,8 +318,8 @@ function CheckoutForm() {
         name: 'Sanctum Fabrics',
         description: `Order ${order.so_number}`,
         prefill: {
-          name: user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : guestName,
-          email: user?.email || guestEmail || undefined,
+          name: user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '',
+          email: user?.email || undefined,
           contact: activePhone,
         },
         theme: {
@@ -342,6 +358,15 @@ function CheckoutForm() {
       setPlacing(false);
     }
   };
+
+  if (cartLoading && !cart) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-[color:var(--ink)]/50">
+        <Loader2 size={32} className="animate-spin text-[color:var(--accent)]" />
+        <p className="mt-3 text-sm">Loading your shopping bag…</p>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -463,7 +488,10 @@ function CheckoutForm() {
             <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
               {items.map((item) => {
                 const price = item.variant?.selling_price ?? item.item?.selling_price ?? 0;
-                const imageUrl = item.variant?.image_url;
+                const imageUrl =
+                  item.variant?.image_url ||
+                  item.item?.images?.find((i) => i.is_primary)?.url ||
+                  item.item?.images?.[0]?.url;
                 return (
                   <div key={item.id} className="flex items-center gap-3">
                     <div className="relative h-14 w-12 shrink-0 overflow-hidden rounded-lg bg-[color:var(--cream)] border border-[color:var(--border)]">
@@ -527,87 +555,59 @@ function CheckoutForm() {
               STEP 1: DETAILS & SHIPPING
              ═══════════════════════════════════════════════════════════════════ */}
           {step === 'details' && (
-            <form onSubmit={handleContinueToPayment} className="space-y-6">
-              {/* Guest / Account Callout */}
+            <div className="space-y-6">
               {!user ? (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 rounded-2xl border border-[color:var(--border)] bg-gradient-to-r from-amber-50/60 to-orange-50/40 p-4.5 text-sm shadow-xs">
-                  <div className="flex items-start sm:items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color:var(--accent)]/10 text-[color:var(--accent)]">
-                      <User size={18} />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-xs text-[color:var(--accent)] uppercase tracking-wider">Fast Mobile Sign In</p>
-                      <p className="text-xs sm:text-sm text-[color:var(--ink)]/80">
-                        Sign in to save your address, track your shipments, and complete your order seamlessly.
-                      </p>
-                    </div>
+                <div className="rounded-3xl border border-[color:var(--border)] bg-white p-8 sm:p-10 text-center shadow-xs space-y-6">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[color:var(--accent)]/10 text-[color:var(--accent)]">
+                    <Lock size={28} />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setAuthModalOpen(true)}
-                    className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-full bg-[color:var(--primary)] px-4.5 py-2.5 text-xs font-semibold text-white hover:bg-[color:var(--primary)]/90 transition-all self-start sm:self-auto shadow-xs"
-                  >
-                    <span>Sign in for faster checkout</span>
-                    <ArrowRight size={13} />
-                  </button>
+                  <div className="space-y-2 max-w-md mx-auto">
+                    <h2 className="font-serif text-2xl text-[color:var(--ink)]">Sign in to complete your order</h2>
+                    <p className="text-sm text-[color:var(--ink)]/70">
+                      An account is required to place an order. Please sign in or register with your mobile number to verify your delivery address, track shipments, and receive invoice updates.
+                    </p>
+                  </div>
+                  {error && (
+                    <div className="flex items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-600 max-w-md mx-auto">
+                      <AlertCircle size={16} className="shrink-0" />
+                      <span>{error}</span>
+                    </div>
+                  )}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setAuthModalOpen(true)}
+                      className="inline-flex items-center gap-2 rounded-full bg-[color:var(--primary)] px-8 py-3.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-[color:var(--primary)]/90 hover:shadow-lg"
+                    >
+                      <User size={16} />
+                      <span>Sign In or Register</span>
+                      <ArrowRight size={15} />
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-between rounded-2xl border border-[color:var(--border)] bg-white p-4 text-sm">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--primary)] text-white text-xs font-semibold">
-                      {user.first_name ? user.first_name[0].toUpperCase() : 'U'}
+                <form onSubmit={handleContinueToPayment} className="space-y-6">
+                  <div className="flex items-center justify-between rounded-2xl border border-[color:var(--border)] bg-white p-4 text-sm">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--primary)] text-white text-xs font-semibold">
+                        {user.first_name ? user.first_name[0].toUpperCase() : 'U'}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-[color:var(--ink)]">
+                          {user.first_name} {user.last_name}
+                        </p>
+                        <p className="text-xs text-[color:var(--ink)]/50">{user.email || user.phone}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-[color:var(--ink)]">
-                        {user.first_name} {user.last_name}
-                      </p>
-                      <p className="text-xs text-[color:var(--ink)]/50">{user.email || user.phone}</p>
-                    </div>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 border border-emerald-200">
+                      <Check size={12} /> Logged In
+                    </span>
                   </div>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 border border-emerald-200">
-                    <Check size={12} /> Logged In
-                  </span>
-                </div>
-              )}
 
-              {/* Saved Addresses (Logged in) */}
-              {user && (
-                <div className="rounded-3xl border border-[color:var(--border)] bg-white p-6 shadow-xs">
-                  <AddressBook onSelect={handleAddressSelect} />
-                </div>
-              )}
-
-              {/* Guest Contact Details */}
-              {!user && (
-                <div className="rounded-3xl border border-[color:var(--border)] bg-white p-6 shadow-xs space-y-4">
-                  <div className="flex items-center gap-2 border-b border-[color:var(--border)] pb-3">
-                    <Mail size={18} className="text-[color:var(--accent)]" />
-                    <h2 className="font-serif text-lg font-semibold text-[color:var(--ink)]">Contact Information</h2>
+                  {/* Saved Addresses (Logged in) */}
+                  <div className="rounded-3xl border border-[color:var(--border)] bg-white p-6 shadow-xs">
+                    <AddressBook onSelect={handleAddressSelect} />
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <label className={labelCls}>Full Name *</label>
-                      <input
-                        required
-                        placeholder="e.g. Ananya Sharma"
-                        value={guestName}
-                        onChange={(e) => setGuestName(e.target.value)}
-                        className={inputCls}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelCls}>Email (For Order Updates)</label>
-                      <input
-                        type="email"
-                        placeholder="ananya@example.com"
-                        value={guestEmail}
-                        onChange={(e) => setGuestEmail(e.target.value)}
-                        className={inputCls}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Delivery Address Form */}
               <div className="rounded-3xl border border-[color:var(--border)] bg-white p-6 shadow-xs space-y-4">
@@ -826,6 +826,8 @@ function CheckoutForm() {
               </button>
             </form>
           )}
+        </div>
+      )}
 
           {/* ═══════════════════════════════════════════════════════════════════
               STEP 2: REVIEW & PAYMENT
@@ -849,14 +851,12 @@ function CheckoutForm() {
                 </div>
 
                 <div className="mt-4 space-y-2 text-sm text-[color:var(--ink)]/80">
-                  {((user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : guestName) || user?.first_name || guestName) && (
-                    <div className="flex items-center gap-2 font-semibold text-[color:var(--ink)]">
-                      <User size={15} className="text-[color:var(--accent)] shrink-0" />
-                      <span>
-                        {(user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : guestName) || user?.first_name || guestName}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 font-semibold text-[color:var(--ink)]">
+                    <User size={15} className="text-[color:var(--accent)] shrink-0" />
+                    <span>
+                      {`${user?.first_name || ''} ${user?.last_name || ''}`.trim() || 'Valued Customer'}
+                    </span>
+                  </div>
                   <p className="leading-relaxed">
                     {[address.line1, address.line2, address.city, address.state, address.pincode, address.country]
                       .filter(Boolean)
@@ -866,9 +866,9 @@ function CheckoutForm() {
                     <span className="flex items-center gap-1.5">
                       <Phone size={13} className="text-[color:var(--accent)]" /> {activePhone}
                     </span>
-                    {(user?.email || guestEmail) && (
+                    {user?.email && (
                       <span className="flex items-center gap-1.5">
-                        <Mail size={13} className="text-[color:var(--accent)]" /> {user?.email || guestEmail}
+                        <Mail size={13} className="text-[color:var(--accent)]" /> {user.email}
                       </span>
                     )}
                     {selectedOption && (
@@ -981,7 +981,10 @@ function CheckoutForm() {
             <div className="mt-4 space-y-3 max-h-72 overflow-y-auto pr-1">
               {items.map((item) => {
                 const price = item.variant?.selling_price ?? item.item?.selling_price ?? 0;
-                const imageUrl = item.variant?.image_url;
+                const imageUrl =
+                  item.variant?.image_url ||
+                  item.item?.images?.find((i) => i.is_primary)?.url ||
+                  item.item?.images?.[0]?.url;
                 return (
                   <div key={item.id} className="flex items-center gap-3.5">
                     <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-xl bg-[color:var(--cream)] border border-[color:var(--border)]">

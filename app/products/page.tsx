@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { getProducts, getCategoryHierarchy, buildAttributeFacets, getVariantAttribute, expandProductsByColor, toTitleCase, type Product, type AttributeFacet, type AttributeFacetValue } from '@/lib/dristaService';
-import { colorSwatchHex } from '@/lib/colorSwatches';
+import { colorSwatchHex, splitColorList } from '@/lib/colorSwatches';
 import { sampleProducts } from '@/lib/sampleProducts';
 
 export const metadata = {
@@ -348,22 +348,39 @@ const COLOR_FACET_VISIBLE_COUNT = 7;
 function ColorSwatchRow({
   facetKey,
   value,
-  hex,
   isChecked,
 }: {
   facetKey: string;
   value: AttributeFacetValue;
-  hex?: string;
   isChecked: boolean;
 }) {
+  // A facet value can itself be a comma-separated multicolor combo (a single
+  // SKU listed with several colors) — render one dot per color, same
+  // treatment as the variant picker on the product page, instead of one dot
+  // (or a blank one) for the whole combo.
+  const names = splitColorList(value.value);
+  const hexes = value.hex ? splitColorList(value.hex) : [];
   return (
     <label className="flex items-center gap-2.5 text-xs text-[color:var(--ink)]/80">
       <input type="checkbox" name={`attr_${facetKey}`} value={value.value} defaultChecked={isChecked} />
-      {hex ? (
-        <span className="h-5 w-5 shrink-0 rounded-full ring-1 ring-black/10" style={{ backgroundColor: hex }} />
-      ) : (
-        <span className="h-5 w-5 shrink-0 rounded-full bg-[color:var(--cream)] ring-1 ring-black/10" />
-      )}
+      <span className="flex items-center shrink-0">
+        {names.map((name, i) => {
+          const swatch = hexes[i] || colorSwatchHex(name);
+          return swatch ? (
+            <span
+              key={i}
+              className="h-5 w-5 rounded-full ring-1 ring-black/10"
+              style={{ backgroundColor: swatch, marginLeft: i > 0 ? '-8px' : 0 }}
+            />
+          ) : (
+            <span
+              key={i}
+              className="h-5 w-5 rounded-full bg-[color:var(--cream)] ring-1 ring-black/10"
+              style={{ marginLeft: i > 0 ? '-8px' : 0 }}
+            />
+          );
+        })}
+      </span>
       {/* Displayed Title Case ("Red Wine") regardless of how the admin typed
           it — the underlying value/casing (used for the checkbox value and
           filter matching) is left untouched. */}
@@ -383,7 +400,7 @@ function ColorFacetList({ facet, isChecked }: { facet: AttributeFacet; isChecked
   return (
     <div className="space-y-2.5">
       {visible.map((v) => (
-        <ColorSwatchRow key={v.value} facetKey={facet.key} value={v} hex={v.hex || colorSwatchHex(v.value)} isChecked={isChecked(v.value)} />
+        <ColorSwatchRow key={v.value} facetKey={facet.key} value={v} isChecked={isChecked(v.value)} />
       ))}
       {rest.length > 0 && (
         <details className="group/more">
@@ -392,7 +409,7 @@ function ColorFacetList({ facet, isChecked }: { facet: AttributeFacet; isChecked
           </summary>
           <div className="mt-2.5 space-y-2.5">
             {rest.map((v) => (
-              <ColorSwatchRow key={v.value} facetKey={facet.key} value={v} hex={v.hex || colorSwatchHex(v.value)} isChecked={isChecked(v.value)} />
+              <ColorSwatchRow key={v.value} facetKey={facet.key} value={v} isChecked={isChecked(v.value)} />
             ))}
           </div>
         </details>

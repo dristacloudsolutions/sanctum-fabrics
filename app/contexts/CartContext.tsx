@@ -20,9 +20,13 @@ export function CartProvider({ children, initialCart }: { children: ReactNode; i
   const [loading, setLoading] = useState(false);
 
   const refresh = async () => {
-    const res = await fetch('/api/cart');
-    const payload = await res.json();
-    if (res.ok) setCart(payload.cart);
+    try {
+      const res = await fetch('/api/cart');
+      const payload = await res.json();
+      if (res.ok && payload?.cart) setCart(payload.cart);
+    } catch {
+      // Retain existing cart state on network or fetch failure
+    }
   };
 
   // No cart_id cookie existed yet at server-render time (first-ever visit) —
@@ -42,7 +46,7 @@ export function CartProvider({ children, initialCart }: { children: ReactNode; i
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error || 'Failed to add to cart');
-      setCart(payload.cart);
+      if (payload?.cart) setCart(payload.cart);
     } finally {
       setLoading(false);
     }
@@ -58,7 +62,7 @@ export function CartProvider({ children, initialCart }: { children: ReactNode; i
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error || 'Failed to update item');
-      setCart(payload.cart);
+      if (payload?.cart) setCart(payload.cart);
     } finally {
       setLoading(false);
     }
@@ -71,7 +75,7 @@ export function CartProvider({ children, initialCart }: { children: ReactNode; i
       const res = await fetch(`/api/cart/items/${itemId}${qs}`, { method: 'DELETE' });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error || 'Failed to remove item');
-      setCart(payload.cart);
+      if (payload?.cart) setCart(payload.cart);
     } finally {
       setLoading(false);
     }
