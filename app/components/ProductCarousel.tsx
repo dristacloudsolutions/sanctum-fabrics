@@ -54,9 +54,11 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
       onMouseLeave={() => setPaused(false)}
       onTouchStart={() => pauseThenResume()}
     >
-      <div ref={trackRef} className="flex gap-4 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* Card widths match the Featured Pieces grid (2 / 3 / 4 per row; gap-4, sm:gap-6),
+          so both sections show the same card size. Snapping keeps the 80% scroll steps aligned. */}
+      <div ref={trackRef} className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2 sm:gap-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {entries.map((entry) => (
-          <div key={`${entry.product.id}-${entry.variant?.id ?? 'base'}`} className="w-[60%] shrink-0 sm:w-[38%] lg:w-[23%]">
+          <div key={`${entry.product.id}-${entry.variant?.id ?? 'base'}`} className="w-[calc((100%-1rem)/2)] shrink-0 snap-start sm:w-[calc((100%-3rem)/3)] lg:w-[calc((100%-4.5rem)/4)]">
             <ProductCard product={entry.product} variant={entry.variant} colorLabel={entry.colorLabel} />
           </div>
         ))}

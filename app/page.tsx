@@ -84,7 +84,7 @@ export default async function Home() {
       </section>
 
       {/* New Arrivals */}
-      <section className="mx-auto max-w-6xl px-5 pb-12 pt-10">
+      <section className="mx-auto max-w-6xl px-4 sm:px-5 pb-12 pt-10">
         <Reveal>
           <h2 className="text-center font-serif text-2xl text-[color:var(--ink)] md:text-3xl">New Arrivals</h2>
           <div className="mx-auto my-4 flex max-w-[160px] items-center gap-3">
@@ -119,9 +119,10 @@ export default async function Home() {
             </Link>
           </div>
         </Reveal>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
+        {/* Same card size as the New Arrivals carousel (ProductCarousel): 2 / 3 / 4 per row. */}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4">
           {featured.map((entry, i) => (
-            <div key={`${entry.product.id}-${entry.variant?.id ?? 'base'}`} className="mx-auto w-full max-w-md sm:max-w-none">
+            <div key={`${entry.product.id}-${entry.variant?.id ?? 'base'}`} className="w-full">
               <Reveal delay={Math.min(i, 3) * 0.08}>
                 <ProductCard product={entry.product} variant={entry.variant} colorLabel={entry.colorLabel} />
               </Reveal>

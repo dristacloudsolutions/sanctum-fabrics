@@ -103,10 +103,10 @@ export default function ProductCard({
     >
       {/* Brand strip */}
       <div className="flex items-center gap-2 px-3 pt-3">
-        <span className="relative h-6 w-6 overflow-hidden rounded-full ring-1 ring-[color:var(--ink)]/10">
+        <span className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full ring-1 ring-[color:var(--ink)]/10">
           <Image src="/sanctum_logo_card.jpg" alt="" fill unoptimized className="object-cover" />
         </span>
-        <span className="font-serif text-[11px] uppercase tracking-[0.15em] text-[color:var(--ink)]/70">
+        <span className="min-w-0 truncate font-serif text-[11px] uppercase tracking-[0.15em] text-[color:var(--ink)]/70">
           Sanctum Collections
         </span>
       </div>
@@ -120,7 +120,7 @@ export default function ProductCard({
           leaves a big empty gap around them (`contain`) — SmartFitImage picks
           per-photo based on how close its real aspect ratio is to this card's
           3:4 box. */}
-      <div className="relative mt-2.5 aspect-[3/4] w-full overflow-hidden bg-[color:var(--cream)]">
+      <div className="relative mt-2.5 aspect-[3/4] w-full overflow-hidden bg-white">
         {displayUrl ? (
           <SmartFitImage
             key={displayUrl}
@@ -160,18 +160,22 @@ export default function ProductCard({
 
       {/* Details */}
       <div className="px-3.5 pb-3.5 pt-2.5">
-        <h3 className="line-clamp-2 font-serif text-sm leading-snug text-[color:var(--ink)]">{displayName}</h3>
-        {price !== undefined && (
-          <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <p className="text-base font-bold text-[color:var(--ink)]">₹{formatINR(price)}</p>
-            {hasDiscount && (
-              <>
-                <p className="text-xs text-[color:var(--ink)]/40 line-through">₹{formatINR(mrp!)}</p>
-                <p className="text-xs font-semibold text-[color:var(--accent)]">{discountPct}% off</p>
-              </>
-            )}
-          </div>
-        )}
+        {/* Fixed heights so every card is the same size whatever the name or price:
+            the name always takes two lines' room, and the price row never wraps. */}
+        <h3 className="line-clamp-2 min-h-[2.75em] font-serif text-sm leading-snug text-[color:var(--ink)]" title={displayName}>{displayName}</h3>
+        <div className="mt-1.5 flex h-6 items-baseline gap-x-2 overflow-hidden whitespace-nowrap">
+          {price !== undefined && (
+            <>
+              <p className="text-base font-bold text-[color:var(--ink)]">₹{formatINR(price)}</p>
+              {hasDiscount && (
+                <>
+                  <p className="text-xs text-[color:var(--ink)]/40 line-through">₹{formatINR(mrp!)}</p>
+                  <p className="text-xs font-semibold text-[color:var(--accent)]">{discountPct}% off</p>
+                </>
+              )}
+            </>
+          )}
+        </div>
 
         <div className="mt-2.5 flex items-center justify-between border-t border-[color:var(--ink)]/8 pt-2.5">
           <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[color:var(--accent)]">
