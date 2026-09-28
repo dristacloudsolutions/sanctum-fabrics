@@ -13,7 +13,6 @@ import {
   ShieldCheck,
   ShoppingBag,
   Sparkles,
-  Truck,
   Check,
   Lock,
   RotateCcw,
@@ -24,7 +23,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/app/contexts/CartContext';
 import { useWishlist } from '@/app/contexts/WishlistContext';
-import { CouponPreview, Promotion } from '@/lib/dristaService';
+import { CouponPreview, Promotion, resolveImageUrl } from '@/lib/dristaService';
 import { formatINR } from '@/lib/format';
 
 const FREE_SHIPPING_THRESHOLD = 2999;
@@ -80,12 +79,6 @@ export default function CartPage() {
   const isFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD || subtotal === 0;
   const shippingAmount = isFreeShipping ? 0 : 150;
   const total = Math.max(0, subtotal - discount) + shippingAmount;
-
-  // Free shipping progress calculation
-  const amountNeededForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
-  const shippingProgress = FREE_SHIPPING_THRESHOLD > 0
-    ? Math.min(100, Math.round((subtotal / FREE_SHIPPING_THRESHOLD) * 100))
-    : 100;
 
   const applyCoupon = async (codeToApply?: string) => {
     const code = (codeToApply || couponCode).trim().toUpperCase();
@@ -261,41 +254,6 @@ export default function CartPage() {
           </div>
         </div>
 
-        {/* Free Shipping Progress Callout */}
-        <div className="mb-8 rounded-2xl border border-emerald-200/80 bg-gradient-to-r from-emerald-50/90 to-teal-50/50 p-4 sm:p-5 shadow-xs">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-2xs">
-                <Truck size={18} />
-              </div>
-              <div>
-                {isFreeShipping ? (
-                  <p className="text-xs sm:text-sm font-bold text-emerald-900">
-                    🎉 You have unlocked <span className="underline decoration-emerald-400">FREE Express Delivery</span> on this order!
-                  </p>
-                ) : (
-                  <p className="text-xs sm:text-sm font-semibold text-emerald-900">
-                    Add <span className="font-bold">₹{formatINR(amountNeededForFreeShipping)}</span> more to unlock <span className="font-bold">FREE Express Delivery</span>!
-                  </p>
-                )}
-                <p className="text-[11px] text-emerald-700/80 mt-0.5">
-                  Handcrafted textiles safely packaged and insured across India.
-                </p>
-              </div>
-            </div>
-            <span className="text-xs font-bold text-emerald-800 shrink-0 hidden sm:block">
-              {isFreeShipping ? '100%' : `${shippingProgress}%`}
-            </span>
-          </div>
-
-          <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-emerald-200/70">
-            <div
-              className="h-full bg-emerald-600 transition-all duration-500 rounded-full"
-              style={{ width: `${shippingProgress}%` }}
-            />
-          </div>
-        </div>
-
         {/* Main Grid: Items on Left, Order Summary on Right */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           {/* Left Column: Line Items (8 Cols) */}
@@ -326,10 +284,13 @@ export default function CartPage() {
                 {items.map((item) => {
                   const unitPrice = item.variant?.selling_price ?? item.item?.selling_price ?? 0;
                   const itemTotal = unitPrice * item.quantity;
-                  const imageUrl =
+                  const rawImageUrl =
                     item.variant?.image_url ||
+                    (item as any).image_url ||
                     item.item?.images?.find((i) => i.is_primary)?.url ||
-                    item.item?.images?.[0]?.url;
+                    item.item?.images?.[0]?.url ||
+                    (item.item as any)?.image_url;
+                  const imageUrl = resolveImageUrl(rawImageUrl);
                   const isUpdating = updatingItemId === item.item_id;
 
                   return (
@@ -503,6 +464,35 @@ export default function CartPage() {
                   <span>{pincodeResult.message}</span>
                 </div>
               )}
+            </div>
+
+            {/* Artisanal Trust Pillars */}
+            <div className="rounded-3xl border border-[color:var(--border)] bg-white p-5 sm:p-6 shadow-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-[color:var(--border)]">
+                <div className="flex items-start gap-3 text-xs sm:pr-4">
+                  <Sparkles size={18} className="text-[color:var(--accent)] shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-[color:var(--ink)]">100% Authentic Handcrafted Weaves</p>
+                    <p className="text-[11px] text-[color:var(--ink)]/55 mt-0.5">Direct from master weavers and artisans</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 text-xs pt-3 sm:pt-0 sm:px-4">
+                  <RotateCcw size={18} className="text-[color:var(--accent)] shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-[color:var(--ink)]">7-Day Hassle-Free Returns</p>
+                    <p className="text-[11px] text-[color:var(--ink)]/55 mt-0.5">Easy doorstep reverse pickups &amp; exchanges</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 text-xs pt-3 sm:pt-0 sm:pl-4">
+                  <ShieldCheck size={18} className="text-[color:var(--accent)] shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-[color:var(--ink)]">Safe &amp; Insured Doorstep Delivery</p>
+                    <p className="text-[11px] text-[color:var(--ink)]/55 mt-0.5">Tamper-evident luxury packaging</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Continue Shopping Link */}
@@ -696,33 +686,6 @@ export default function CartPage() {
               <div className="pt-2 flex items-center justify-center gap-1.5 text-center text-[11px] text-[color:var(--ink)]/50">
                 <Lock size={13} className="text-emerald-600" />
                 <span>256-Bit SSL Encrypted &amp; Bank-Grade Security</span>
-              </div>
-            </div>
-
-            {/* Artisanal Trust Pillars */}
-            <div className="rounded-3xl border border-[color:var(--border)] bg-white p-5 shadow-xs space-y-3">
-              <div className="flex items-start gap-3 text-xs">
-                <Sparkles size={16} className="text-[color:var(--accent)] shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-[color:var(--ink)]">100% Authentic Handcrafted Weaves</p>
-                  <p className="text-[11px] text-[color:var(--ink)]/50">Direct from master weavers and artisans</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 text-xs border-t border-[color:var(--border)] pt-3">
-                <RotateCcw size={16} className="text-[color:var(--accent)] shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-[color:var(--ink)]">7-Day Hassle-Free Returns</p>
-                  <p className="text-[11px] text-[color:var(--ink)]/50">Easy doorstep reverse pickups &amp; exchanges</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 text-xs border-t border-[color:var(--border)] pt-3">
-                <ShieldCheck size={16} className="text-[color:var(--accent)] shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-[color:var(--ink)]">Safe &amp; Insured Doorstep Delivery</p>
-                  <p className="text-[11px] text-[color:var(--ink)]/50">Tamper-evident luxury packaging</p>
-                </div>
               </div>
             </div>
           </div>

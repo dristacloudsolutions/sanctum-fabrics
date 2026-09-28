@@ -102,31 +102,23 @@ export default function ProductCard({
       className="group block overflow-hidden border border-[color:var(--ink)]/8 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-12px_rgba(42,36,32,0.18)]"
     >
       {/* Brand strip */}
-      <div className="flex items-center gap-2 px-3 pt-3">
-        <span className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full ring-1 ring-[color:var(--ink)]/10">
+      <div className="flex items-center gap-2 px-3 pt-2">
+        <span className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full ring-1 ring-[color:var(--ink)]/10">
           <Image src="/sanctum_logo_card.jpg" alt="" fill unoptimized className="object-cover" />
         </span>
-        <span className="min-w-0 truncate font-serif text-[11px] uppercase tracking-[0.15em] text-[color:var(--ink)]/70">
+        <span className="min-w-0 truncate font-serif text-[10.5px] uppercase tracking-[0.14em] text-[color:var(--ink)]/70">
           Sanctum Collections
         </span>
       </div>
 
-      {/* Image block: single hero photo — on hover it auto-cycles through
-          this card's photos (with pagination dots), and snaps back to the
-          one still image the instant the pointer leaves. The catalog mixes
-          portrait product photography with landscape AI-generated mockups
-          (very different aspect ratios), so a fixed object-fit either crops
-          the landscape ones down to an unrecognizable sliver (`cover`) or
-          leaves a big empty gap around them (`contain`) — SmartFitImage picks
-          per-photo based on how close its real aspect ratio is to this card's
-          3:4 box. */}
-      <div className="relative mt-2.5 aspect-[3/4] w-full overflow-hidden bg-white">
+      {/* Image block */}
+      <div className="relative mt-1.5 aspect-[4/5] w-full overflow-hidden bg-white">
         {displayUrl ? (
           <SmartFitImage
             key={displayUrl}
             src={displayUrl}
             alt={displayName}
-            boxAspect={3 / 4}
+            boxAspect={4 / 5}
             unoptimized
             className="transition-transform duration-500 group-hover:scale-105"
           />
@@ -137,20 +129,19 @@ export default function ProductCard({
         )}
 
         {hasDiscount && (
-          <span className="absolute left-0 top-3 rounded-r-full bg-[color:var(--accent)] py-1 pl-2.5 pr-3 text-[11px] font-bold tracking-wide text-white shadow-sm">
+          <span className="absolute left-0 top-2.5 rounded-r-full bg-[color:var(--accent)] py-0.5 pl-2 pr-2.5 text-[10px] font-bold tracking-wide text-white shadow-xs">
             {discountPct}% OFF
           </span>
         )}
 
-        {/* Pagination dots — only while actively cycling on hover; the idle
-            card is a single still photo, not something to page through. */}
+        {/* Pagination dots */}
         {hovering && carouselUrls.length > 1 && (
-          <div className="absolute inset-x-0 bottom-2.5 flex items-center justify-center gap-1">
+          <div className="absolute inset-x-0 bottom-2 flex items-center justify-center gap-1">
             {carouselUrls.map((url, i) => (
               <span
                 key={url + i}
-                className={`h-1.5 rounded-full transition-all ${
-                  i === activeIndex ? 'w-3.5 bg-[color:var(--accent)]' : 'w-1.5 bg-white/80'
+                className={`h-1 rounded-full transition-all ${
+                  i === activeIndex ? 'w-3 bg-[color:var(--accent)]' : 'w-1 bg-white/80'
                 }`}
               />
             ))}
@@ -159,26 +150,27 @@ export default function ProductCard({
       </div>
 
       {/* Details */}
-      <div className="px-3.5 pb-3.5 pt-2.5">
-        {/* Fixed heights so every card is the same size whatever the name or price:
-            the name always takes two lines' room, and the price row never wraps. */}
-        <h3 className="line-clamp-2 min-h-[2.75em] font-serif text-sm leading-snug text-[color:var(--ink)]" title={displayName}>{displayName}</h3>
-        <div className="mt-1.5 flex h-6 items-baseline gap-x-2 overflow-hidden whitespace-nowrap">
+      <div className="px-3 pb-2.5 pt-2">
+        {/* Fixed heights so every card is the same size whatever the name or price */}
+        <h3 className="line-clamp-2 min-h-[2.4em] font-serif text-[13px] leading-tight text-[color:var(--ink)]" title={displayName}>
+          {displayName}
+        </h3>
+        <div className="mt-1 flex h-5 items-baseline gap-x-2 overflow-hidden whitespace-nowrap">
           {price !== undefined && (
             <>
-              <p className="text-base font-bold text-[color:var(--ink)]">₹{formatINR(price)}</p>
+              <p className="text-sm sm:text-base font-bold text-[color:var(--ink)]">₹{formatINR(price)}</p>
               {hasDiscount && (
                 <>
-                  <p className="text-xs text-[color:var(--ink)]/40 line-through">₹{formatINR(mrp!)}</p>
-                  <p className="text-xs font-semibold text-[color:var(--accent)]">{discountPct}% off</p>
+                  <p className="text-[11px] text-[color:var(--ink)]/40 line-through">₹{formatINR(mrp!)}</p>
+                  <p className="text-[11px] font-semibold text-[color:var(--accent)]">{discountPct}% off</p>
                 </>
               )}
             </>
           )}
         </div>
 
-        <div className="mt-2.5 flex items-center justify-between border-t border-[color:var(--ink)]/8 pt-2.5">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[color:var(--accent)]">
+        <div className="mt-1.5 flex items-center justify-between border-t border-[color:var(--ink)]/8 pt-1.5">
+          <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[color:var(--accent)]">
             View Details
           </span>
           <div className="flex items-center gap-1">
@@ -187,18 +179,18 @@ export default function ProductCard({
                 type="button"
                 onClick={handleWishlistClick}
                 aria-label={wishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
-                className="flex h-7 w-7 items-center justify-center rounded-full text-[color:var(--ink)]/50 transition-colors hover:text-[color:var(--accent)]"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-[color:var(--ink)]/50 transition-colors hover:text-[color:var(--accent)]"
               >
-                <Heart size={15} fill={wishlisted ? 'var(--accent)' : 'none'} className={wishlisted ? 'text-[color:var(--accent)]' : ''} />
+                <Heart size={13} fill={wishlisted ? 'var(--accent)' : 'none'} className={wishlisted ? 'text-[color:var(--accent)]' : ''} />
               </button>
             )}
             <button
               type="button"
               onClick={handleShareClick}
               aria-label="Share this product"
-              className="flex h-7 w-7 items-center justify-center rounded-full text-[color:var(--ink)]/50 transition-colors hover:text-[color:var(--accent)]"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-[color:var(--ink)]/50 transition-colors hover:text-[color:var(--accent)]"
             >
-              <Share2 size={14} />
+              <Share2 size={13} />
             </button>
           </div>
         </div>

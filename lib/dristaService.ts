@@ -179,6 +179,11 @@ const DRISTA_API_KEY =
   process.env.NEXT_PUBLIC_DRISTA_API_KEY ||
   'dr_live_pk_465f2737_6e54f434b85b9933d015626baf04413d44338bdb';
 const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || 'e467e2f9-334e-4a90-8d12-d85ac7554fa3';
+const DRISTA_CDN_DOMAIN = (
+  process.env.DRISTA_CDN_DOMAIN ||
+  process.env.NEXT_PUBLIC_CDN_DOMAIN ||
+  'https://d3w26h1x5xxse5.cloudfront.net'
+).replace(/\/+$/, '');
 
 /** Product detail URL — prefers the item_code (checked for uniqueness on
  * every create/update on the backend), then the slug (which a bulk import or
@@ -330,15 +335,23 @@ export function buildAttributeFacets(products: Product[]): AttributeFacet[] {
  * it since it looks like a relative path, not an absolute URL. */
 export function resolveImageUrl(url: string | undefined): string | undefined {
   if (!url) return url;
+  if (url.startsWith('s3://drista-documents/')) {
+    const key = url.replace('s3://drista-documents/', '');
+    return `${DRISTA_CDN_DOMAIN}/${key}`;
+  }
   if (url.startsWith('s3://')) {
     const withoutProtocol = url.substring(5);
     const firstSlash = withoutProtocol.indexOf('/');
     if (firstSlash !== -1) {
       const bucket = withoutProtocol.substring(0, firstSlash);
       const key = withoutProtocol.substring(firstSlash + 1);
-      return `https://${bucket}.s3.amazonaws.com/${key}`;
+      return bucket === 'drista-documents' ? `${DRISTA_CDN_DOMAIN}/${key}` : `https://${bucket}.s3.amazonaws.com/${key}`;
     }
     return url;
+  }
+  const s3Match = url.match(/^https?:\/\/drista-documents\.s3[.-][^/]+\/(.+)$/i) || url.match(/^https?:\/\/drista-documents\.s3\.amazonaws\.com\/(.+)$/i);
+  if (s3Match) {
+    return `${DRISTA_CDN_DOMAIN}/${s3Match[1]}`;
   }
   if (!/^https?:\/\//i.test(url) && !url.startsWith('/')) {
     return `https://${url}`;
@@ -617,11 +630,18 @@ function hydrateCartImages(cart: Cart | null): Cart | null {
   if (!cart) return null;
   for (const item of cart.items || []) {
     if (item.variant?.image_url) item.variant.image_url = resolveImageUrl(item.variant.image_url);
+    if ((item as any).image_url) (item as any).image_url = resolveImageUrl((item as any).image_url);
+    if ((item.item as any)?.image_url) (item.item as any).image_url = resolveImageUrl((item.item as any).image_url);
     if ((item.item as any)?.images && Array.isArray((item.item as any).images)) {
       (item.item as any).images = (item.item as any).images.map((img: any) => ({
         ...img,
         url: resolveImageUrl(img.url) || img.url,
       }));
+    }
+    // If variant has no image of its own, backfill from item's primary or first image
+    if (item.variant && !item.variant.image_url && (item.item as any)?.images?.length > 0) {
+      const fallbackUrl = (item.item as any).images.find((i: any) => i.is_primary)?.url || (item.item as any).images[0]?.url;
+      if (fallbackUrl) item.variant.image_url = fallbackUrl;
     }
   }
   return cart;

@@ -1,8 +1,13 @@
-import Link from 'next/link';
-import { SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
-import { getProducts, getCategoryHierarchy, buildAttributeFacets, getVariantAttribute, expandProductsByColor, toTitleCase, type Product, type AttributeFacet, type AttributeFacetValue } from '@/lib/dristaService';
-import { colorSwatchHex, splitColorList } from '@/lib/colorSwatches';
+import ProductFiltersTopBar from '../components/ProductFiltersTopBar';
+import {
+  getProducts,
+  getCategoryHierarchy,
+  buildAttributeFacets,
+  getVariantAttribute,
+  expandProductsByColor,
+  type Product,
+} from '@/lib/dristaService';
 import { sampleProducts } from '@/lib/sampleProducts';
 
 export const metadata = {
@@ -21,13 +26,6 @@ type SearchParams = {
   // dedicated top-level param).
   [key: `attr_${string}`]: string | string[] | undefined;
 };
-
-const SORT_OPTIONS = [
-  { value: '', label: 'Relevance' },
-  { value: 'price_asc', label: 'Price: Low to High' },
-  { value: 'price_desc', label: 'Price: High to Low' },
-  { value: 'name_asc', label: 'Name: A–Z' },
-] as const;
 
 function toValueList(v: string | string[] | undefined): string[] {
   if (!v) return [];
@@ -114,306 +112,41 @@ export default async function ProductsPage({
     products = [...products].sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  const paramsAsRecord = params as Record<string, string | string[] | undefined>;
-  const isAttrChecked = (key: string, value: string) => toValueList(paramsAsRecord[`attr_${key}`]).includes(value);
-
   // Each product-color combination gets its own card — see expandProductsByColor.
   const cardEntries = expandProductsByColor(products);
 
   return (
-    <div className="mx-auto max-w-7xl px-5 pb-16 pt-8">
-      <div className="mb-8">
-        <p className="text-sm text-[color:var(--ink)]/60">
-          {cardEntries.length} piece{cardEntries.length === 1 ? '' : 's'} available
-        </p>
-        {categoryFallback && (
-          <p className="mt-1 text-xs text-[color:var(--ink)]/50">
-            No pieces in this category yet — showing other products you might like.
-          </p>
-        )}
-        {usingSample && (
-          <p className="mt-1 text-xs text-[color:var(--ink)]/40">
-            Sample catalog shown — connect the live catalog in lib/dristaService.ts once onboarded.
-          </p>
+    <div className="min-h-screen pb-16">
+      {/* Sticky top filter bar */}
+      <ProductFiltersTopBar
+        categories={categories}
+        attributeFacets={attributeFacets}
+        totalCount={cardEntries.length}
+        categoryFallback={categoryFallback}
+        usingSample={usingSample}
+      />
+
+      {/* Main product catalog grid */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6">
+        {products.length === 0 ? (
+          <div className="py-20 text-center">
+            <p className="text-base text-[color:var(--ink)]/60">
+              {hasFilters ? 'No pieces match your filters — try adjusting or resetting them.' : 'No products available right now — check back soon.'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5 sm:gap-5 md:gap-6">
+            {cardEntries.map((entry) => (
+              <ProductCard
+                key={`${entry.product.id}-${entry.variant?.id ?? 'base'}`}
+                product={entry.product}
+                variant={entry.variant}
+                colorLabel={entry.colorLabel}
+              />
+            ))}
+          </div>
         )}
       </div>
-
-      <form method="get" className="grid grid-cols-1 gap-8 lg:grid-cols-[200px_1fr]">
-        {/* Mobile-only drawer toggle — CSS-only (peer checkbox), no client JS
-            needed since the rest of this form is a plain server-rendered GET. */}
-        <input type="checkbox" id="mobile-filters" className="peer hidden" />
-        <label
-          htmlFor="mobile-filters"
-          className="flex cursor-pointer items-center justify-between rounded-xl border border-[color:var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[color:var(--ink)] lg:hidden"
-        >
-          <span className="flex items-center gap-2">
-            <SlidersHorizontal size={16} /> Filter &amp; Sort
-          </span>
-          {hasFilters && <span className="text-xs font-semibold text-[color:var(--accent)]">Active</span>}
-        </label>
-
-        {/* ─── Filter & Sort sidebar ─────────────────────────────────────── */}
-        <aside className="filter-accordion fixed inset-0 z-50 hidden overflow-y-auto bg-white peer-checked:block lg:sticky lg:top-6 lg:z-auto lg:block lg:h-fit lg:rounded-2xl lg:border lg:border-[color:var(--border)]">
-          <div className="flex items-center justify-between border-b border-[color:var(--border)] px-4 py-3.5">
-            <span className="text-xs font-bold uppercase tracking-widest text-[color:var(--ink)]">Filter &amp; Sort</span>
-            <div className="flex items-center gap-4">
-              {hasFilters && (
-                <Link href="/products" className="text-xs font-medium text-[color:var(--accent)] underline underline-offset-2">
-                  Clear
-                </Link>
-              )}
-              <label htmlFor="mobile-filters" aria-label="Close filters" className="cursor-pointer text-[color:var(--ink)]/50 hover:text-[color:var(--ink)] lg:hidden">
-                <X size={18} />
-              </label>
-            </div>
-          </div>
-
-          <div className="divide-y divide-[color:var(--border)] px-4">
-            {/* Search */}
-            <div className="py-4">
-              <label className="block text-xs font-semibold uppercase tracking-widest text-[color:var(--ink)]/50">Search</label>
-              <input
-                type="text"
-                name="q"
-                defaultValue={params.q || ''}
-                placeholder="Saree, blouse, fabric…"
-                className="mt-1.5 w-full rounded-lg border border-[color:var(--border)] px-3 py-2 text-sm"
-              />
-            </div>
-
-            {/* Sort by */}
-            <details className="group py-4">
-              <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-[color:var(--ink)]">
-                Sort by
-                <FacetToggleIcon />
-              </summary>
-              <div className="mt-3 space-y-2">
-                {SORT_OPTIONS.map((opt) => (
-                  <label key={opt.value} className="flex items-center gap-2 text-sm text-[color:var(--ink)]/70">
-                    <input type="radio" name="sort" value={opt.value} defaultChecked={(params.sort || '') === opt.value} />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-            </details>
-
-            {/* Price */}
-            <details className="group py-4">
-              <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-[color:var(--ink)]">
-                Price
-                <FacetToggleIcon />
-              </summary>
-              <div className="mt-3 flex items-center gap-2">
-                <input
-                  type="number"
-                  name="min_price"
-                  min={0}
-                  placeholder="Min"
-                  defaultValue={params.min_price || ''}
-                  className="w-full rounded-lg border border-[color:var(--border)] px-3 py-2 text-sm"
-                />
-                <span className="text-[color:var(--ink)]/30">–</span>
-                <input
-                  type="number"
-                  name="max_price"
-                  min={0}
-                  placeholder="Max"
-                  defaultValue={params.max_price || ''}
-                  className="w-full rounded-lg border border-[color:var(--border)] px-3 py-2 text-sm"
-                />
-              </div>
-            </details>
-
-            {/* Discounts */}
-            <details className="group py-4">
-              <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-[color:var(--ink)]">
-                Discounts
-                <FacetToggleIcon />
-              </summary>
-              <div className="mt-3">
-                <label className="flex items-center gap-2 text-sm text-[color:var(--ink)]/70">
-                  <input type="checkbox" name="discount" value="1" defaultChecked={params.discount === '1'} />
-                  On sale only
-                </label>
-              </div>
-            </details>
-
-            {/* Category */}
-            {categories.length > 0 && (
-              <details className="group py-4">
-                <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-[color:var(--ink)]">
-                  Category
-                  <FacetToggleIcon />
-                </summary>
-                <div className="mt-3 space-y-2">
-                  <label className="flex items-center gap-2 text-sm text-[color:var(--ink)]/70">
-                    <input type="radio" name="category" value="" defaultChecked={!params.category} />
-                    All Categories
-                  </label>
-                  {categories.map((cat) => (
-                    <div key={cat.id}>
-                      <label className="flex items-center gap-2 text-sm text-[color:var(--ink)]/70">
-                        <input type="radio" name="category" value={cat.id} defaultChecked={params.category === cat.id} />
-                        {cat.name}
-                      </label>
-                      {(cat.children || []).map((child) => (
-                        <label key={child.id} className="ml-5 flex items-center gap-2 text-sm text-[color:var(--ink)]/70">
-                          <input type="radio" name="category" value={child.id} defaultChecked={params.category === child.id} />
-                          {child.name}
-                        </label>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </details>
-            )}
-
-
-            {/* Dynamic attribute facets — Size, Material, Fit, whatever the
-                catalog's variants actually carry, no hardcoded list. Color
-                gets its own swatch-dot + count treatment; everything else
-                stays a plain checkbox list. */}
-            {attributeFacets.map((facet) => (
-              <details key={facet.key} className="group py-4" open={facet.label.toLowerCase() === 'color'}>
-                <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold uppercase tracking-wide text-[color:var(--ink)]">
-                  {facet.label}
-                  <FacetToggleIcon />
-                </summary>
-                <div className="mt-3">
-                  {facet.label.toLowerCase() === 'color' ? (
-                    <ColorFacetList facet={facet} isChecked={(v) => isAttrChecked(facet.key, v)} />
-                  ) : (
-                    <div className="space-y-2">
-                      {facet.values.map(({ value, count }) => (
-                        <label key={value} className="flex items-center gap-2 text-sm text-[color:var(--ink)]/70">
-                          <input
-                            type="checkbox"
-                            name={`attr_${facet.key}`}
-                            value={value}
-                            defaultChecked={isAttrChecked(facet.key, value)}
-                          />
-                          {value}
-                          <span className="text-[color:var(--ink)]/40">({count})</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </details>
-            ))}
-          </div>
-
-          <div className="p-4">
-            <button
-              type="submit"
-              className="w-full rounded-full bg-[color:var(--primary)] px-6 py-2.5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
-            >
-              Apply
-            </button>
-          </div>
-        </aside>
-
-        {/* ─── Results grid ──────────────────────────────────────────────── */}
-        <div>
-          {products.length === 0 ? (
-            <p className="text-sm text-[color:var(--ink)]/50">
-              {hasFilters ? 'No pieces match your filters — try adjusting them.' : 'No products available right now — check back soon.'}
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-4">
-              {cardEntries.map((entry) => (
-                <div key={`${entry.product.id}-${entry.variant?.id ?? 'base'}`} className="w-[180px] sm:w-[210px] lg:w-[240px]">
-                  <ProductCard product={entry.product} variant={entry.variant} colorLabel={entry.colorLabel} />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function FacetToggleIcon() {
-  return (
-    <span className="text-base leading-none text-[color:var(--ink)]/40">
-      <span className="group-open:hidden">+</span>
-      <span className="hidden group-open:inline">−</span>
-    </span>
-  );
-}
-
-const COLOR_FACET_VISIBLE_COUNT = 7;
-
-function ColorSwatchRow({
-  facetKey,
-  value,
-  isChecked,
-}: {
-  facetKey: string;
-  value: AttributeFacetValue;
-  isChecked: boolean;
-}) {
-  // A facet value can itself be a comma-separated multicolor combo (a single
-  // SKU listed with several colors) — render one dot per color, same
-  // treatment as the variant picker on the product page, instead of one dot
-  // (or a blank one) for the whole combo.
-  const names = splitColorList(value.value);
-  const hexes = value.hex ? splitColorList(value.hex) : [];
-  return (
-    <label className="flex items-center gap-2.5 text-xs text-[color:var(--ink)]/80">
-      <input type="checkbox" name={`attr_${facetKey}`} value={value.value} defaultChecked={isChecked} />
-      <span className="flex items-center shrink-0">
-        {names.map((name, i) => {
-          const swatch = hexes[i] || colorSwatchHex(name);
-          return swatch ? (
-            <span
-              key={i}
-              className="h-5 w-5 rounded-full ring-1 ring-black/10"
-              style={{ backgroundColor: swatch, marginLeft: i > 0 ? '-8px' : 0 }}
-            />
-          ) : (
-            <span
-              key={i}
-              className="h-5 w-5 rounded-full bg-[color:var(--cream)] ring-1 ring-black/10"
-              style={{ marginLeft: i > 0 ? '-8px' : 0 }}
-            />
-          );
-        })}
-      </span>
-      {/* Displayed Title Case ("Red Wine") regardless of how the admin typed
-          it — the underlying value/casing (used for the checkbox value and
-          filter matching) is left untouched. */}
-      <span>{toTitleCase(value.value)}</span>
-      <span className="text-[color:var(--ink)]/40">({value.count})</span>
-    </label>
-  );
-}
-
-// Swatch dot + name + count per color, like a typical marketplace color
-// filter — only the first few show by default, the rest sit behind a
-// "+N more" disclosure (plain <details>, no client JS needed).
-function ColorFacetList({ facet, isChecked }: { facet: AttributeFacet; isChecked: (value: string) => boolean }) {
-  const visible = facet.values.slice(0, COLOR_FACET_VISIBLE_COUNT);
-  const rest = facet.values.slice(COLOR_FACET_VISIBLE_COUNT);
-
-  return (
-    <div className="space-y-2.5">
-      {visible.map((v) => (
-        <ColorSwatchRow key={v.value} facetKey={facet.key} value={v} isChecked={isChecked(v.value)} />
-      ))}
-      {rest.length > 0 && (
-        <details className="group/more">
-          <summary className="cursor-pointer list-none text-xs font-semibold text-[color:var(--accent)]">
-            + {rest.length} more
-          </summary>
-          <div className="mt-2.5 space-y-2.5">
-            {rest.map((v) => (
-              <ColorSwatchRow key={v.value} facetKey={facet.key} value={v} isChecked={isChecked(v.value)} />
-            ))}
-          </div>
-        </details>
-      )}
     </div>
   );
 }

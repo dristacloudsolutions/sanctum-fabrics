@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       // Real product photos come from the backend's S3 bucket / presigned URLs.
       { protocol: 'https', hostname: '**.amazonaws.com' },
+      { protocol: 'https', hostname: 'cdn.drista.in' },
+      { protocol: 'https', hostname: '**.cloudfront.net' },
       { protocol: 'https', hostname: 'api.drista.in' },
     ],
   },

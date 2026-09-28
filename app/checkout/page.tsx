@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useCart } from '@/app/contexts/CartContext';
-import { ShippingOption, CouponPreview, AddressDetails } from '@/lib/dristaService';
+import { ShippingOption, CouponPreview, AddressDetails, resolveImageUrl } from '@/lib/dristaService';
 import { formatINR } from '@/lib/format';
 import { INDIAN_STATES, COUNTRIES } from '@/lib/addressData';
 import { buildWhatsAppLink } from '@/lib/whatsapp';
@@ -488,10 +488,13 @@ function CheckoutForm() {
             <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
               {items.map((item) => {
                 const price = item.variant?.selling_price ?? item.item?.selling_price ?? 0;
-                const imageUrl =
+                const rawImageUrl =
                   item.variant?.image_url ||
+                  (item as any).image_url ||
                   item.item?.images?.find((i) => i.is_primary)?.url ||
-                  item.item?.images?.[0]?.url;
+                  item.item?.images?.[0]?.url ||
+                  (item.item as any)?.image_url;
+                const imageUrl = resolveImageUrl(rawImageUrl);
                 return (
                   <div key={item.id} className="flex items-center gap-3">
                     <div className="relative h-14 w-12 shrink-0 overflow-hidden rounded-lg bg-[color:var(--cream)] border border-[color:var(--border)]">
@@ -981,10 +984,13 @@ function CheckoutForm() {
             <div className="mt-4 space-y-3 max-h-72 overflow-y-auto pr-1">
               {items.map((item) => {
                 const price = item.variant?.selling_price ?? item.item?.selling_price ?? 0;
-                const imageUrl =
+                const rawImageUrl =
                   item.variant?.image_url ||
+                  (item as any).image_url ||
                   item.item?.images?.find((i) => i.is_primary)?.url ||
-                  item.item?.images?.[0]?.url;
+                  item.item?.images?.[0]?.url ||
+                  (item.item as any)?.image_url;
+                const imageUrl = resolveImageUrl(rawImageUrl);
                 return (
                   <div key={item.id} className="flex items-center gap-3.5">
                     <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-xl bg-[color:var(--cream)] border border-[color:var(--border)]">
