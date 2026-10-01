@@ -47,15 +47,23 @@ export default function AddToCartPanel({
   // non-selectable companion the admin's color picker writes alongside a color
   // name (e.g. "Color Hex" next to "Color") — filtered out here so it never
   // shows up as its own pickable row.
-  const attributeKeys = useMemo(() => {
+  //
+  // Keys the admin marked "Info only" (product metadata) are split out into
+  // infoKeys: shown as details of the selected variant, never as a pick row.
+  const { attributeKeys, infoKeys } = useMemo(() => {
+    const infoOnly = new Set((product.metadata?.info_attribute_keys || []).map((k) => String(k).toLowerCase()));
     const seen = new Map<string, string>(); // lowercased key -> first-seen display casing
     variants.forEach((v) => Object.keys(v.attributes || {}).forEach((k) => {
       const lower = k.trim().toLowerCase();
       if (lower.endsWith(' hex')) return;
       if (!seen.has(lower)) seen.set(lower, k.trim());
     }));
-    return Array.from(seen.values());
-  }, [variants]);
+    const all = Array.from(seen.values());
+    return {
+      attributeKeys: all.filter((k) => !infoOnly.has(k.toLowerCase())),
+      infoKeys: all.filter((k) => infoOnly.has(k.toLowerCase())),
+    };
+  }, [variants, product.metadata]);
 
   const [selected, setSelected] = useState<Record<string, string>>(() => {
     const initialVariant = initialVariantId ? variants.find((v) => v.id === initialVariantId) : undefined;
@@ -84,6 +92,19 @@ export default function AddToCartPanel({
     if (attributeKeys.some((k) => !selected[k])) return null;
     return variants.find((v) => attributeKeys.every((k) => String(getAttr(v, k)) === selected[k])) || null;
   }, [variants, attributeKeys, selected]);
+
+  // Info-only details: the selected variant's own values, or — before a full
+  // selection — only the values every variant shares, so nothing shown is wrong.
+  const infoDetails = infoKeys
+    .map((key) => {
+      if (matchedVariant) {
+        const value = getAttr(matchedVariant, key);
+        return { key, value: value === undefined || value === null ? '' : String(value) };
+      }
+      const values = new Set(variants.map((v) => String(getAttr(v, key) ?? '')));
+      return { key, value: values.size === 1 ? Array.from(values)[0] : '' };
+    })
+    .filter((d) => d.value.trim() !== '');
 
   useEffect(() => {
     onVariantImageChange?.(matchedVariant?.image_url);
@@ -217,6 +238,17 @@ export default function AddToCartPanel({
           </div>
         );
       })}
+
+      {infoDetails.length > 0 && (
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-xl border border-[color:var(--border)] px-4 py-3 text-sm">
+          {infoDetails.map(({ key, value }) => (
+            <div key={key} className="contents">
+              <dt className="text-xs font-semibold uppercase tracking-widest text-[color:var(--ink)]/50 self-center">{key.replace(/_/g, ' ')}</dt>
+              <dd className="text-[color:var(--ink)]/80">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
 
       <div className="flex items-center gap-4">
         <div className="flex items-center rounded-full border border-[color:var(--border)]">
