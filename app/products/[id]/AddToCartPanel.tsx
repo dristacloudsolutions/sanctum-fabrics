@@ -14,6 +14,11 @@ import { formatINR } from '@/lib/format';
 // the same "Color" vs "color" key-casing bug).
 const getAttr = getVariantAttribute;
 
+/** "base_fabric" / "wash care" -> "Base Fabric" / "Wash Care" */
+function detailLabel(key: string) {
+  return key.replace(/_/g, ' ').trim().replace(/\s+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export default function AddToCartPanel({
   product,
   onVariantImageChange,
@@ -50,7 +55,7 @@ export default function AddToCartPanel({
   //
   // Keys the admin marked "Info only" (product metadata) are split out into
   // infoKeys: shown as details of the selected variant, never as a pick row.
-  const { attributeKeys, infoKeys } = useMemo(() => {
+  const { attributeKeys, allKeys } = useMemo(() => {
     const infoOnly = new Set((product.metadata?.info_attribute_keys || []).map((k) => String(k).toLowerCase()));
     const seen = new Map<string, string>(); // lowercased key -> first-seen display casing
     variants.forEach((v) => Object.keys(v.attributes || {}).forEach((k) => {
@@ -60,6 +65,7 @@ export default function AddToCartPanel({
     }));
     const all = Array.from(seen.values());
     return {
+      allKeys: all,
       attributeKeys: all.filter((k) => !infoOnly.has(k.toLowerCase())),
       infoKeys: all.filter((k) => infoOnly.has(k.toLowerCase())),
     };
@@ -93,9 +99,10 @@ export default function AddToCartPanel({
     return variants.find((v) => attributeKeys.every((k) => String(getAttr(v, k)) === selected[k])) || null;
   }, [variants, attributeKeys, selected]);
 
-  // Info-only details: the selected variant's own values, or — before a full
-  // selection — only the values every variant shares, so nothing shown is wrong.
-  const infoDetails = infoKeys
+  // Product details list (every attribute, pickable or info-only): the selected
+  // variant's own values, or — before a full selection — only the values every
+  // variant shares, so nothing shown is wrong.
+  const productDetails = allKeys
     .map((key) => {
       if (matchedVariant) {
         const value = getAttr(matchedVariant, key);
@@ -105,6 +112,7 @@ export default function AddToCartPanel({
       return { key, value: values.size === 1 ? Array.from(values)[0] : '' };
     })
     .filter((d) => d.value.trim() !== '');
+  const productCode = product.item_code || matchedVariant?.sku || product.sku;
 
   useEffect(() => {
     onVariantImageChange?.(matchedVariant?.image_url);
@@ -239,17 +247,6 @@ export default function AddToCartPanel({
         );
       })}
 
-      {infoDetails.length > 0 && (
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-xl border border-[color:var(--border)] px-4 py-3 text-sm">
-          {infoDetails.map(({ key, value }) => (
-            <div key={key} className="contents">
-              <dt className="text-xs font-semibold uppercase tracking-widest text-[color:var(--ink)]/50 self-center">{key.replace(/_/g, ' ')}</dt>
-              <dd className="text-[color:var(--ink)]/80">{value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-
       <div className="flex items-center gap-4">
         <div className="flex items-center rounded-full border border-[color:var(--border)]">
           <button
@@ -342,6 +339,18 @@ export default function AddToCartPanel({
           {added ? 'Added' : submitting ? 'Adding…' : outOfStock && !isPreorder ? 'Out of stock' : needsSelection ? 'Select options' : alreadyInCart ? 'Added in Cart' : isPreorder ? 'Pre-order Now' : 'Add to Cart'}
         </button>
       </div>
+      {(productDetails.length > 0 || productCode) && (
+        <section className="border-t border-[color:var(--border)] pt-5">
+          <h2 className="font-serif text-lg text-[color:var(--ink)]">Product details</h2>
+          <ul className="mt-3 list-disc space-y-1.5 pl-5 text-[15px] leading-relaxed text-[color:var(--ink)]/80 marker:text-[color:var(--ink)]/50">
+            {productDetails.map(({ key, value }) => (
+              <li key={key}>{detailLabel(key)} : {value}</li>
+            ))}
+            {productCode && <li>Product Code : {productCode}</li>}
+          </ul>
+        </section>
+      )}
+
       {/* Spacer so the sticky bar above never overlaps the last bit of page content on mobile. */}
       <div className="h-16 md:hidden" aria-hidden />
     </div>
