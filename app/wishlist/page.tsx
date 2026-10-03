@@ -7,6 +7,7 @@ import { Heart, X } from 'lucide-react';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useWishlist } from '@/app/contexts/WishlistContext';
 import { WishlistEntry, productUrl } from '@/lib/dristaService';
+import { formatINR } from '@/lib/format';
 
 export default function WishlistPage() {
   const { user, loading: authLoading } = useAuth();
@@ -91,7 +92,7 @@ export default function WishlistPage() {
                   <div className="p-4">
                     <h3 className="font-serif text-base text-[color:var(--ink)] leading-snug">{product.name}</h3>
                     {price !== undefined && (
-                      <p className="mt-1 text-sm font-semibold text-[color:var(--accent)]">₹{Number(price).toLocaleString('en-IN')}</p>
+                      <p className="mt-1 text-sm font-semibold text-[color:var(--accent)]">₹{formatINR(price)}</p>
                     )}
                   </div>
                 </Link>

@@ -6,18 +6,21 @@
  * before launch — search this file for "TODO" to find every spot.
  */
 
+const businessName = 'Sanctum Fabrics';
+const businessTagline = 'Handcrafted textiles, woven with intention';
+
 export const config = {
   business: {
-    name: 'Sanctum Fabrics',
-    tagline: 'Handcrafted textiles, woven with intention',
+    name: businessName,
+    tagline: businessTagline,
     description:
       'Sanctum Fabrics curates handloom sarees, natural-dye fabrics, and hand block-printed textiles — sourced directly from artisan clusters across India.',
 
     contact: {
-      email: 'hello@sanctumfabrics.in', // TODO: confirm real inbox
-      phone: '+91 90000 00000', // TODO: real phone number
-      whatsApp: '+91 90000 00000', // TODO: real WhatsApp number
-      address: 'Sanctum Fabrics Studio,\nIndia', // TODO: real address
+      email: 'sanctumavemaria@gmail.com',
+      phone: '+91 99208 22231',
+      whatsApp: '+91 93218 46790',
+      address: 'Sanctum Fabrics,\nIndia',
     },
 
     social: {
@@ -31,7 +34,7 @@ export const config = {
   usingSampleCatalog: true,
 
   seo: {
-    title: 'Sanctum Fabrics | Handloom & Artisan Textiles',
+    title: `${businessName} — ${businessTagline}`,
     description:
       'Shop handloom sarees, natural-dye fabrics, and hand block-printed textiles from Sanctum Fabrics. Order directly on WhatsApp.',
     keywords: ['handloom saree', 'natural dye fabric', 'block print textile', 'sanctum fabrics'],

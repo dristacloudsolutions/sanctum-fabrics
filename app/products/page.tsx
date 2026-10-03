@@ -1,19 +1,48 @@
 import Link from 'next/link';
 import ProductCard from '../components/ProductCard';
-import { getProducts, getCategoryHierarchy } from '@/lib/dristaService';
+import ProductFiltersTopBar from '../components/ProductFiltersTopBar';
+import {
+  getProducts,
+  getCategoryHierarchy,
+  buildAttributeFacets,
+  getVariantAttribute,
+  expandProductsByColor,
+  type Product,
+} from '@/lib/dristaService';
 import { sampleProducts } from '@/lib/sampleProducts';
 
 export const metadata = {
   title: 'Catalog | Sanctum Fabrics',
 };
 
+type SearchParams = {
+  q?: string;
+  category?: string;
+  min_price?: string;
+  max_price?: string;
+  discount?: string;
+  sort?: string;
+  // Dynamic per-attribute filters, e.g. attr_size=M&attr_size=L&attr_material=Silk
+  // (this is also how color is filtered — see the attr_color facet — not a
+  // dedicated top-level param).
+  [key: `attr_${string}`]: string | string[] | undefined;
+};
+
+function toValueList(v: string | string[] | undefined): string[] {
+  if (!v) return [];
+  return Array.isArray(v) ? v : [v];
+}
+
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string; min_price?: string; max_price?: string; color?: string }>;
+  searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const hasFilters = Boolean(params.q || params.category || params.min_price || params.max_price || params.color);
+  const attrParams = Object.entries(params).filter(([k]) => k.startsWith('attr_')) as [string, string | string[]][];
+  const hasFilters = Boolean(
+    params.q || params.category || params.min_price || params.max_price || params.discount || attrParams.length > 0
+  );
 
   const [liveProducts, categories] = await Promise.all([
     getProducts({
@@ -21,7 +50,6 @@ export default async function ProductsPage({
       category_id: params.category,
       min_price: params.min_price,
       max_price: params.max_price,
-      color: params.color,
     }),
     getCategoryHierarchy(),
   ]);
@@ -29,109 +57,97 @@ export default async function ProductsPage({
   // Sample data has no filtering support, so it's only a fallback for the
   // unfiltered "browse everything" view — a filtered live query returning
   // zero results should show as "no matches", not silently swap to samples.
-  const products = liveProducts.length > 0 ? liveProducts : hasFilters ? [] : sampleProducts;
+  const baseProducts = liveProducts.length > 0 ? liveProducts : hasFilters ? [] : sampleProducts;
   const usingSample = liveProducts.length === 0 && !hasFilters;
 
+  // A category with no stock yet shows an empty state (with a way back to the
+  // full catalog) rather than quietly listing every product — that read as the
+  // category filter being broken. Subcategories are included by the API.
+  const categoryName = (() => {
+    if (!params.category) return null;
+    for (const cat of categories) {
+      if (cat.id === params.category) return cat.name;
+      for (const child of cat.children || []) if (child.id === params.category) return child.name;
+    }
+    return null;
+  })();
+
+  // Facet option lists are derived from the base (pre-attribute-filter) set
+  // so a group doesn't vanish the moment you pick one of its own values.
+  const attributeFacets = buildAttributeFacets(baseProducts);
+
+  const matchesAttributeFilters = (product: Product) => {
+    if (attrParams.length === 0) return true;
+    return attrParams.every(([key, selected]) => {
+      const wantedValues = toValueList(selected);
+      if (wantedValues.length === 0) return true;
+      const attrKey = key.slice('attr_'.length);
+      // Case-insensitive: the facet's key is one canonical casing (see
+      // buildAttributeFacets), but any given variant may still store this
+      // attribute under a differently-cased key (e.g. "color" vs "Color") —
+      // an exact-key lookup here was excluding those variants/products
+      // even though they clearly have a matching color.
+      return (product.variants || []).some((variant) => {
+        const val = getVariantAttribute(variant, attrKey);
+        return val !== undefined && wantedValues.includes(String(val));
+      });
+    });
+  };
+
+  const hasDiscount = (p: Product) => p.base_price !== undefined && p.selling_price !== undefined && p.base_price > p.selling_price;
+
+  let products = baseProducts.filter(matchesAttributeFilters);
+  if (params.discount === '1') products = products.filter(hasDiscount);
+
+  if (params.sort === 'price_asc') {
+    products = [...products].sort((a, b) => (a.selling_price ?? a.base_price ?? 0) - (b.selling_price ?? b.base_price ?? 0));
+  } else if (params.sort === 'price_desc') {
+    products = [...products].sort((a, b) => (b.selling_price ?? b.base_price ?? 0) - (a.selling_price ?? a.base_price ?? 0));
+  } else if (params.sort === 'name_asc') {
+    products = [...products].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  // Each product-color combination gets its own card — see expandProductsByColor.
+  const cardEntries = expandProductsByColor(products);
+
   return (
-    <div className="mx-auto max-w-6xl px-5 py-16">
-      <div className="mb-8">
-        <h1 className="font-serif text-3xl text-[color:var(--ink)]">The Catalog</h1>
-        <p className="mt-2 text-sm text-[color:var(--ink)]/60">
-          {products.length} piece{products.length === 1 ? '' : 's'} available
-        </p>
-        {usingSample && (
-          <p className="mt-1 text-xs text-[color:var(--ink)]/40">
-            Sample catalog shown — connect the live catalog in lib/dristaService.ts once onboarded.
-          </p>
-        )}
-      </div>
+    <div className="min-h-screen pb-16">
+      {/* Sticky top filter bar */}
+      <ProductFiltersTopBar
+        categories={categories}
+        attributeFacets={attributeFacets}
+        totalCount={cardEntries.length}
+        usingSample={usingSample}
+      />
 
-      <form method="get" className="mb-10 flex flex-wrap items-end gap-3 rounded-2xl border border-[color:var(--border)] bg-white p-4">
-        <div className="min-w-[180px] flex-1">
-          <label className="block text-xs font-semibold uppercase tracking-widest text-[color:var(--ink)]/50">Search</label>
-          <input
-            type="text"
-            name="q"
-            defaultValue={params.q || ''}
-            placeholder="Saree, blouse, fabric…"
-            className="mt-1.5 w-full rounded-lg border border-[color:var(--border)] px-3 py-2 text-sm"
-          />
-        </div>
-
-        {categories.length > 0 && (
-          <div className="min-w-[160px]">
-            <label className="block text-xs font-semibold uppercase tracking-widest text-[color:var(--ink)]/50">Category</label>
-            <select name="category" defaultValue={params.category || ''} className="mt-1.5 w-full rounded-lg border border-[color:var(--border)] px-3 py-2 text-sm">
-              <option value="">All Categories</option>
-              {categories.map((cat) => (
-                <optgroup key={cat.id} label={cat.name}>
-                  <option value={cat.id}>{cat.name}</option>
-                  {(cat.children || []).map((child) => (
-                    <option key={child.id} value={child.id}>&nbsp;&nbsp;{child.name}</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+      {/* Main product catalog grid */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6">
+        {products.length === 0 ? (
+          <div className="py-20 text-center">
+            <p className="text-base text-[color:var(--ink)]/60">
+              {params.category && categoryName && attrParams.length === 0 && !params.q && !params.discount
+                ? `No pieces in ${categoryName} yet — new arrivals are on their way.`
+                : hasFilters ? 'No pieces match your filters — try adjusting or resetting them.' : 'No products available right now — check back soon.'}
+            </p>
+            {hasFilters && (
+              <Link href="/products" className="mt-4 inline-block text-sm font-semibold text-[color:var(--accent)] hover:underline">
+                Browse all pieces
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5 sm:gap-5 md:gap-6">
+            {cardEntries.map((entry) => (
+              <ProductCard
+                key={`${entry.product.id}-${entry.variant?.id ?? 'base'}`}
+                product={entry.product}
+                variant={entry.variant}
+                colorLabel={entry.colorLabel}
+              />
+            ))}
           </div>
         )}
-
-        <div className="w-24">
-          <label className="block text-xs font-semibold uppercase tracking-widest text-[color:var(--ink)]/50">Min ₹</label>
-          <input
-            type="number"
-            name="min_price"
-            min={0}
-            defaultValue={params.min_price || ''}
-            className="mt-1.5 w-full rounded-lg border border-[color:var(--border)] px-3 py-2 text-sm"
-          />
-        </div>
-
-        <div className="w-24">
-          <label className="block text-xs font-semibold uppercase tracking-widest text-[color:var(--ink)]/50">Max ₹</label>
-          <input
-            type="number"
-            name="max_price"
-            min={0}
-            defaultValue={params.max_price || ''}
-            className="mt-1.5 w-full rounded-lg border border-[color:var(--border)] px-3 py-2 text-sm"
-          />
-        </div>
-
-        <div className="min-w-[120px]">
-          <label className="block text-xs font-semibold uppercase tracking-widest text-[color:var(--ink)]/50">Color</label>
-          <input
-            type="text"
-            name="color"
-            placeholder="e.g. Maroon"
-            defaultValue={params.color || ''}
-            className="mt-1.5 w-full rounded-lg border border-[color:var(--border)] px-3 py-2 text-sm"
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="rounded-full bg-[color:var(--primary)] px-6 py-2.5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
-        >
-          Apply
-        </button>
-        {hasFilters && (
-          <Link href="/products" className="text-sm font-medium text-[color:var(--ink)]/50 underline underline-offset-2 hover:text-[color:var(--ink)]">
-            Clear
-          </Link>
-        )}
-      </form>
-
-      {products.length === 0 ? (
-        <p className="text-sm text-[color:var(--ink)]/50">
-          {hasFilters ? 'No pieces match your filters — try adjusting them.' : 'No products available right now — check back soon.'}
-        </p>
-      ) : (
-        <div className="grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -32,7 +32,7 @@ export default function FloatingActions() {
   ];
 
   return (
-    <div className="fixed right-6 bottom-6 z-[60] flex flex-col gap-4">
+    <div className="fixed right-6 bottom-24 z-[60] flex flex-col gap-4 md:bottom-6">
       {actions.map((btn) => (
         <motion.a
           key={btn.label}

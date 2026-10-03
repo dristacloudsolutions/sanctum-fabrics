@@ -133,7 +133,10 @@ export default function ReturnRequestModal({
                 <option value="">Select an option…</option>
                 {variants.map((v) => (
                   <option key={v.id} value={v.id}>
-                    {Object.entries(v.attributes || {}).map(([k, val]) => `${k}: ${val}`).join(' · ') || v.sku}
+                    {Object.entries(v.attributes || {})
+                      .filter(([k]) => !k.toLowerCase().endsWith(' hex'))
+                      .map(([k, val]) => `${k}: ${val}`)
+                      .join(' · ') || v.sku}
                   </option>
                 ))}
               </select>
