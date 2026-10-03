@@ -147,6 +147,14 @@ export default async function Home() {
             mobile Safari/Chrome. The carousel has its own entrance motion
             anyway, so it doesn't need the scroll-reveal treatment. */}
         <ProductCarousel products={newArrivals} />
+        <div className="mt-6 text-center">
+          <Link
+            href="/products"
+            className="inline-flex items-center gap-2 border border-[color:var(--ink)]/30 px-6 py-3 text-sm font-semibold text-[color:var(--ink)] transition-colors hover:bg-[color:var(--ink)] hover:text-white"
+          >
+            View all →
+          </Link>
+        </div>
       </section>
       )}
 
