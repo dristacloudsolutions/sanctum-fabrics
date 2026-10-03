@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { MessageCircle, Truck, ShieldCheck, RotateCcw, BadgeCheck, Gem, Sparkles, HeartHandshake } from 'lucide-react';
+import { MessageCircle, Truck, ShieldCheck, Flower2, BadgeCheck, Gem, Sparkles, HeartHandshake } from 'lucide-react';
 import ProductCard from './components/ProductCard';
 import ProductCarousel from './components/ProductCarousel';
 import Reveal from './components/Reveal';
 import config from './config/config';
-import { getProducts, expandProductsByColor } from '@/lib/dristaService';
-import { sampleProducts } from '@/lib/sampleProducts';
+import { getProducts, getCategoryHierarchy, expandProductsByColor } from '@/lib/dristaService';
+import { sampleProducts, SHOW_SAMPLE_CATALOG } from '@/lib/sampleProducts';
 import { buildWhatsAppLink } from '@/lib/whatsapp';
 
 const FEATURES = [
@@ -20,7 +20,7 @@ const FEATURES = [
 
 const SPECIALITIES = [
   { icon: Gem, label: 'Kanchipuram Silks', sub: 'Royal weaves, timeless beauty' },
-  { icon: RotateCcw, label: 'Kerala Kasavu', sub: 'Pure tradition, elegant grace' },
+  { icon: Flower2, label: 'Kerala Kasavu', sub: 'Pure tradition, elegant grace' },
   { icon: Sparkles, label: 'Temple Inspiration', sub: 'Heritage designs that inspire' },
   { icon: BadgeCheck, label: 'Handloom Craftsmanship', sub: 'Woven with care, made to last' },
 ];
@@ -28,12 +28,20 @@ const SPECIALITIES = [
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const liveProducts = await getProducts();
-  const products = liveProducts.length > 0 ? liveProducts : sampleProducts;
-  // Each product-color combination gets its own card — see expandProductsByColor.
-  const featured = expandProductsByColor(products).slice(0, 3);
+  const [liveProducts, categories] = await Promise.all([getProducts(), getCategoryHierarchy()]);
+  const products = liveProducts.length > 0 ? liveProducts : SHOW_SAMPLE_CATALOG ? sampleProducts : [];
   const newArrivals = products.slice(0, 6);
-  const usingSample = liveProducts.length === 0;
+  // Featured: other pieces than New Arrivals (each colour its own card, see
+  // expandProductsByColor), in full rows of 4 — or 2 when there are only a few.
+  const shownIds = new Set(newArrivals.map((p) => p.id));
+  const featuredPool = expandProductsByColor(products.filter((p) => !shownIds.has(p.id)));
+  const featured = featuredPool.slice(0, featuredPool.length >= 4 ? Math.min(8, featuredPool.length - (featuredPool.length % 4)) : featuredPool.length - (featuredPool.length % 2));
+  const topCategories = categories.filter((c) => !c.parent_id);
+  // A short row (few top-level categories) is filled out with their subcategories.
+  const categoryTiles = (topCategories.length >= 4 ? topCategories : [...topCategories, ...topCategories.flatMap((c) => c.children || [])]).slice(0, 12);
+  const sarees = topCategories.find((c) => /saree/i.test(c.name));
+  const sareesHref = sarees ? `/products?category=${sarees.id}` : '/products';
+  const usingSample = liveProducts.length === 0 && SHOW_SAMPLE_CATALOG;
 
   return (
     <div>
@@ -65,7 +73,7 @@ export default async function Home() {
                 </p>
                 <div className="mt-8 flex flex-wrap justify-center gap-4">
                   <Link
-                    href="/products"
+                    href={sareesHref}
                     className="inline-flex items-center gap-2 bg-[color:var(--accent)] px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
                   >
                     Shop Sarees
@@ -83,7 +91,46 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Shop by category */}
+      {categoryTiles.length > 0 && (
+        <section className="mx-auto max-w-6xl px-4 pt-10 sm:px-5">
+          <h2 className="text-center font-serif text-2xl text-[color:var(--ink)] md:text-3xl">Shop by Category</h2>
+          <div className="mt-6 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="mx-auto flex w-max snap-x gap-4">
+            {categoryTiles.map((c) => (
+              <Link key={c.id} href={`/products?category=${c.id}`} className="group w-24 shrink-0 snap-start text-center sm:w-32">
+                <div className="relative mx-auto aspect-square w-full overflow-hidden rounded-full border border-[color:var(--border)] bg-white">
+                  {c.image_url ? (
+                    <Image src={c.image_url} alt={c.name} fill sizes="144px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                  ) : (
+                    <span className="flex h-full items-center justify-center font-serif text-3xl text-[color:var(--accent)]">{c.name.charAt(0)}</span>
+                  )}
+                </div>
+                <p className="mt-2 text-sm font-medium text-[color:var(--ink)] group-hover:text-[color:var(--accent)]">{c.name}</p>
+              </Link>
+            ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {products.length === 0 && (
+        <section className="mx-auto max-w-xl px-5 py-16 text-center">
+          <h2 className="font-serif text-2xl text-[color:var(--ink)]">Our collection is being refreshed</h2>
+          <p className="mt-3 text-[color:var(--ink)]/70">Please check back in a few minutes, or message us on WhatsApp and we&apos;ll share what&apos;s available.</p>
+          <a
+            href={buildWhatsAppLink("Hi Sanctum Fabrics, I'd like to see your latest collection.")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] px-6 py-3 text-sm font-semibold text-white"
+          >
+            <MessageCircle size={16} /> Message us on WhatsApp
+          </a>
+        </section>
+      )}
+
       {/* New Arrivals */}
+      {newArrivals.length > 0 && (
       <section className="mx-auto max-w-6xl px-4 sm:px-5 pb-12 pt-10">
         <Reveal>
           <h2 className="text-center font-serif text-2xl text-[color:var(--ink)] md:text-3xl">New Arrivals</h2>
@@ -101,8 +148,10 @@ export default async function Home() {
             anyway, so it doesn't need the scroll-reveal treatment. */}
         <ProductCarousel products={newArrivals} />
       </section>
+      )}
 
       {/* Featured Pieces */}
+      {featured.length > 0 && (
       <section className="mx-auto max-w-6xl px-4 sm:px-5 pb-16 pt-2">
         <Reveal>
           <div className="mb-6 flex items-end justify-between sm:mb-8">
@@ -130,6 +179,7 @@ export default async function Home() {
           ))}
         </div>
       </section>
+      )}
 
       {/* Feature strip */}
       <section className="border-y border-[color:var(--border)] bg-white">

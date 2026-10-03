@@ -155,15 +155,13 @@ export default function ProductCard({
         <h3 className="line-clamp-2 min-h-[2.4em] font-serif text-[13px] leading-tight text-[color:var(--ink)]" title={displayName}>
           {displayName}
         </h3>
-        <div className="mt-1 flex h-5 items-baseline gap-x-2 overflow-hidden whitespace-nowrap">
+        <div className="mt-1 flex h-5 items-baseline gap-x-2 overflow-hidden">
           {price !== undefined && (
             <>
               <p className="text-sm sm:text-base font-bold text-[color:var(--ink)]">₹{formatINR(price)}</p>
               {hasDiscount && (
-                <>
-                  <p className="text-[11px] text-[color:var(--ink)]/40 line-through">₹{formatINR(mrp!)}</p>
-                  <p className="text-[11px] font-semibold text-[color:var(--accent)]">{discountPct}% off</p>
-                </>
+                // The "% OFF" badge on the photo already shows the discount.
+                <p className="truncate text-xs text-[color:var(--ink)]/40 line-through">₹{formatINR(mrp!)}</p>
               )}
             </>
           )}

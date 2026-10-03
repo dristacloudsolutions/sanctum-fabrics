@@ -4,6 +4,9 @@ import type { Product } from './dristaService';
 // tenant and her products are entered into the Item Master. Shaped exactly
 // like the real /ecommerce/products response so swapping to live data is a
 // no-op — see README.md for the cutover steps.
+/** Sample catalogue is for local development only — customers never see it. */
+export const SHOW_SAMPLE_CATALOG = process.env.NODE_ENV !== 'production';
+
 export const sampleProducts: Product[] = [
   {
     id: 'sample-1',

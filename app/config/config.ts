@@ -7,20 +7,20 @@
  */
 
 const businessName = 'Sanctum Fabrics';
-const businessTagline = 'Handcrafted textiles, woven with intention';
+const businessTagline = 'South Indian sarees, churidars and designer tops';
 
 export const config = {
   business: {
     name: businessName,
     tagline: businessTagline,
     description:
-      'Sanctum Fabrics curates handloom sarees, natural-dye fabrics, and hand block-printed textiles — sourced directly from artisan clusters across India.',
+      'Sanctum Fabrics brings authentic South Indian sarees — Kanchipuram silks, Kerala kasavu, handloom and designer weaves — with elegant churidars and tops, curated for every occasion.',
 
     contact: {
       email: 'sanctumavemaria@gmail.com',
-      phone: '+91 99208 22231',
+      phone: '+91 99208 22232',
       whatsApp: '+91 93218 46790',
-      address: 'Sanctum Fabrics,\nIndia',
+      address: 'Sanctum Fabrics\nIndia',
     },
 
     social: {
@@ -36,8 +36,8 @@ export const config = {
   seo: {
     title: `${businessName} — ${businessTagline}`,
     description:
-      'Shop handloom sarees, natural-dye fabrics, and hand block-printed textiles from Sanctum Fabrics. Order directly on WhatsApp.',
-    keywords: ['handloom saree', 'natural dye fabric', 'block print textile', 'sanctum fabrics'],
+      'Shop authentic South Indian sarees — Kanchipuram silk, Kerala kasavu, handloom and designer sarees — plus churidars and tops at Sanctum Fabrics. Secure online payment, pan-India delivery.',
+    keywords: ['south indian sarees', 'kanchipuram silk saree', 'kerala kasavu saree', 'handloom saree', 'churidar', 'sanctum fabrics'],
   },
 
   colors: {

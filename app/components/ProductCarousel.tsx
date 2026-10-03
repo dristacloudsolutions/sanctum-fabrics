@@ -36,6 +36,8 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
 
   useEffect(() => {
     if (paused || entries.length <= 3) return;
+    // Phones: let the shopper swipe; a track moving under their thumb is annoying.
+    if (window.matchMedia('(hover: none)').matches) return;
     const id = window.setInterval(() => {
       const track = trackRef.current;
       if (!track) return;

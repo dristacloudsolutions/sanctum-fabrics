@@ -38,7 +38,7 @@ export default function Footer({ tenantProfile }: { tenantProfile?: TenantProfil
   const addr = tenantProfile?.contact_address;
   const address = addr
     ? [addr.line1, addr.line2, addr.city, addr.state, addr.postal_code, addr.country].filter(Boolean).join(', ')
-    : business.contact.address.replace(/\n/g, ', ');
+    : business.contact.address.split('\n').map((l) => l.trim().replace(/,$/, '')).filter(Boolean).join(', ');
   const instagram = tenantProfile?.settings?.social?.instagram || business.social.instagram;
   const facebook = tenantProfile?.settings?.social?.facebook || business.social.facebook;
 

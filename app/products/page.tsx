@@ -9,7 +9,7 @@ import {
   expandProductsByColor,
   type Product,
 } from '@/lib/dristaService';
-import { sampleProducts } from '@/lib/sampleProducts';
+import { sampleProducts, SHOW_SAMPLE_CATALOG } from '@/lib/sampleProducts';
 
 export const metadata = {
   title: 'Catalog | Sanctum Fabrics',
@@ -57,8 +57,8 @@ export default async function ProductsPage({
   // Sample data has no filtering support, so it's only a fallback for the
   // unfiltered "browse everything" view — a filtered live query returning
   // zero results should show as "no matches", not silently swap to samples.
-  const baseProducts = liveProducts.length > 0 ? liveProducts : hasFilters ? [] : sampleProducts;
-  const usingSample = liveProducts.length === 0 && !hasFilters;
+  const baseProducts = liveProducts.length > 0 ? liveProducts : hasFilters || !SHOW_SAMPLE_CATALOG ? [] : sampleProducts;
+  const usingSample = liveProducts.length === 0 && !hasFilters && SHOW_SAMPLE_CATALOG;
 
   // A category with no stock yet shows an empty state (with a way back to the
   // full catalog) rather than quietly listing every product — that read as the

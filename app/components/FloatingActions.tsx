@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Phone } from 'lucide-react';
 import { useTenant } from '@/app/contexts/TenantContext';
@@ -9,6 +10,17 @@ import { buildWhatsAppLink } from '@/lib/whatsapp';
 export default function FloatingActions() {
   const { tenantProfile } = useTenant();
   const phone = tenantProfile?.phone || config.business.contact.phone;
+  // On phones the buttons would sit on top of the hero and its buttons, so they
+  // appear once the shopper scrolls past the first screen.
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 768px)');
+    const update = () => setVisible(desktop.matches || window.scrollY > window.innerHeight * 0.6);
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    desktop.addEventListener('change', update);
+    return () => { window.removeEventListener('scroll', update); desktop.removeEventListener('change', update); };
+  }, []);
 
   const actions = [
     {
@@ -31,8 +43,10 @@ export default function FloatingActions() {
     },
   ];
 
+  if (!visible) return null;
+
   return (
-    <div className="fixed right-6 bottom-24 z-[60] flex flex-col gap-4 md:bottom-6">
+    <div className="fixed right-4 bottom-24 z-[60] flex flex-col gap-3 md:right-6 md:bottom-6 md:gap-4">
       {actions.map((btn) => (
         <motion.a
           key={btn.label}
@@ -40,7 +54,7 @@ export default function FloatingActions() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label={btn.label}
-          className={`flex h-14 w-14 items-center justify-center rounded-full text-white shadow-2xl transition-all duration-300 ${btn.className}`}
+          className={`flex h-12 w-12 items-center justify-center md:h-14 md:w-14 rounded-full text-white shadow-2xl transition-all duration-300 ${btn.className}`}
           initial={{ scale: 0, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           transition={{ type: 'spring', stiffness: 260, damping: 20, delay: btn.delay }}
