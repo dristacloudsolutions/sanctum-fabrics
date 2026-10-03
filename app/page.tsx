@@ -31,10 +31,12 @@ export default async function Home() {
   const [liveProducts, categories] = await Promise.all([getProducts(), getCategoryHierarchy()]);
   const products = liveProducts.length > 0 ? liveProducts : SHOW_SAMPLE_CATALOG ? sampleProducts : [];
   const newArrivals = products.slice(0, 6);
-  // Featured: other pieces than New Arrivals (each colour its own card, see
-  // expandProductsByColor), in full rows of 4 — or 2 when there are only a few.
+  // Featured: products starred in admin (metadata.featured); if none are, other
+  // pieces than New Arrivals. Each colour is its own card (expandProductsByColor);
+  // full rows of 4 — or 2 when there are only a few.
+  const starred = products.filter((p) => p.metadata?.featured === true);
   const shownIds = new Set(newArrivals.map((p) => p.id));
-  const featuredPool = expandProductsByColor(products.filter((p) => !shownIds.has(p.id)));
+  const featuredPool = expandProductsByColor(starred.length > 0 ? starred : products.filter((p) => !shownIds.has(p.id)));
   const featured = featuredPool.slice(0, featuredPool.length >= 4 ? Math.min(8, featuredPool.length - (featuredPool.length % 4)) : featuredPool.length - (featuredPool.length % 2));
   const topCategories = categories.filter((c) => !c.parent_id);
   // A short row (few top-level categories) is filled out with their subcategories.

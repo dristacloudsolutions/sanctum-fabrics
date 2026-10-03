@@ -40,7 +40,7 @@ export type Product = {
   variants?: ProductVariant[];
   // metadata.info_attribute_keys (lowercased): variant attribute keys the admin
   // marked "Info only" — shown as details, never as a choice to pick.
-  metadata?: { info_attribute_keys?: string[]; [key: string]: unknown } | null;
+  metadata?: { info_attribute_keys?: string[]; featured?: boolean; [key: string]: unknown } | null;
 };
 
 export type CartLineItem = {
