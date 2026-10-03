@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import ProductCard from '../components/ProductCard';
 import ProductFiltersTopBar from '../components/ProductFiltersTopBar';
 import {
@@ -56,26 +57,20 @@ export default async function ProductsPage({
   // Sample data has no filtering support, so it's only a fallback for the
   // unfiltered "browse everything" view — a filtered live query returning
   // zero results should show as "no matches", not silently swap to samples.
-  let baseProducts = liveProducts.length > 0 ? liveProducts : hasFilters ? [] : sampleProducts;
-  let usingSample = liveProducts.length === 0 && !hasFilters;
+  const baseProducts = liveProducts.length > 0 ? liveProducts : hasFilters ? [] : sampleProducts;
+  const usingSample = liveProducts.length === 0 && !hasFilters;
 
-  // An empty category/subcategory shouldn't dead-end the page — fall back to
-  // the wider catalog (still honoring search/price if set) rather than
-  // showing nothing, since a shopper landing here from a category link with
-  // no stock yet still wants to see *something*.
-  let categoryFallback = false;
-  if (params.category && liveProducts.length === 0) {
-    const fallbackProducts = await getProducts({
-      q: params.q,
-      min_price: params.min_price,
-      max_price: params.max_price,
-    });
-    if (fallbackProducts.length > 0) {
-      baseProducts = fallbackProducts;
-      categoryFallback = true;
-      usingSample = false;
+  // A category with no stock yet shows an empty state (with a way back to the
+  // full catalog) rather than quietly listing every product — that read as the
+  // category filter being broken. Subcategories are included by the API.
+  const categoryName = (() => {
+    if (!params.category) return null;
+    for (const cat of categories) {
+      if (cat.id === params.category) return cat.name;
+      for (const child of cat.children || []) if (child.id === params.category) return child.name;
     }
-  }
+    return null;
+  })();
 
   // Facet option lists are derived from the base (pre-attribute-filter) set
   // so a group doesn't vanish the moment you pick one of its own values.
@@ -122,7 +117,6 @@ export default async function ProductsPage({
         categories={categories}
         attributeFacets={attributeFacets}
         totalCount={cardEntries.length}
-        categoryFallback={categoryFallback}
         usingSample={usingSample}
       />
 
@@ -131,8 +125,15 @@ export default async function ProductsPage({
         {products.length === 0 ? (
           <div className="py-20 text-center">
             <p className="text-base text-[color:var(--ink)]/60">
-              {hasFilters ? 'No pieces match your filters — try adjusting or resetting them.' : 'No products available right now — check back soon.'}
+              {params.category && categoryName && attrParams.length === 0 && !params.q && !params.discount
+                ? `No pieces in ${categoryName} yet — new arrivals are on their way.`
+                : hasFilters ? 'No pieces match your filters — try adjusting or resetting them.' : 'No products available right now — check back soon.'}
             </p>
+            {hasFilters && (
+              <Link href="/products" className="mt-4 inline-block text-sm font-semibold text-[color:var(--accent)] hover:underline">
+                Browse all pieces
+              </Link>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5 sm:gap-5 md:gap-6">
