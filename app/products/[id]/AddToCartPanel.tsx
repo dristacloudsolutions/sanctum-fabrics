@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, Check, Heart } from 'lucide-react';
-import { Product, getVariantAttribute } from '@/lib/dristaService';
+import { Product, ProductVariant, getVariantAttribute } from '@/lib/dristaService';
 import { colorSwatchHex, splitColorList } from '@/lib/colorSwatches';
 import { useCart } from '@/app/contexts/CartContext';
 import { useWishlist } from '@/app/contexts/WishlistContext';
@@ -22,10 +22,13 @@ function detailLabel(key: string) {
 export default function AddToCartPanel({
   product,
   onVariantImageChange,
+  onVariantChange,
   initialVariantId,
 }: {
   product: Product;
   onVariantImageChange?: (url: string | undefined) => void;
+  /** The fully selected variant, or null while the shopper is still choosing. */
+  onVariantChange?: (variant: ProductVariant | null) => void;
   /** Variant to preselect on load — carried through from the product card
    * link (via productUrl's `variant` query param) so the shopper lands on
    * the exact same variant whose photo drew them in, not an unselected state. */
@@ -115,6 +118,11 @@ export default function AddToCartPanel({
   const productCode = product.item_code || matchedVariant?.sku || product.sku;
 
   useEffect(() => {
+    onVariantChange?.(matchedVariant);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchedVariant?.id]);
+
+  useEffect(() => {
     onVariantImageChange?.(matchedVariant?.image_url);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchedVariant?.image_url]);
@@ -158,6 +166,17 @@ export default function AddToCartPanel({
 
   return (
     <div className="mt-6 space-y-5">
+      {(productDetails.length > 0 || productCode) && (
+        <section>
+          <h2 className="font-serif text-lg text-[color:var(--ink)]">Product details</h2>
+          <ul className="mt-3 list-disc space-y-1.5 pl-5 text-[15px] leading-relaxed text-[color:var(--ink)]/80 marker:text-[color:var(--ink)]/50">
+            {productDetails.map(({ key, value }) => (
+              <li key={key}>{detailLabel(key)} : {value}</li>
+            ))}
+            {productCode && <li>Product Code : {productCode}</li>}
+          </ul>
+        </section>
+      )}
       {price !== undefined && (
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <p className="text-2xl font-semibold text-[color:var(--accent)]">₹{formatINR(price)}</p>
@@ -339,17 +358,6 @@ export default function AddToCartPanel({
           {added ? 'Added' : submitting ? 'Adding…' : outOfStock && !isPreorder ? 'Out of stock' : needsSelection ? 'Select options' : alreadyInCart ? 'Added in Cart' : isPreorder ? 'Pre-order Now' : 'Add to Cart'}
         </button>
       </div>
-      {(productDetails.length > 0 || productCode) && (
-        <section className="border-t border-[color:var(--border)] pt-5">
-          <h2 className="font-serif text-lg text-[color:var(--ink)]">Product details</h2>
-          <ul className="mt-3 list-disc space-y-1.5 pl-5 text-[15px] leading-relaxed text-[color:var(--ink)]/80 marker:text-[color:var(--ink)]/50">
-            {productDetails.map(({ key, value }) => (
-              <li key={key}>{detailLabel(key)} : {value}</li>
-            ))}
-            {productCode && <li>Product Code : {productCode}</li>}
-          </ul>
-        </section>
-      )}
 
       {/* Spacer so the sticky bar above never overlaps the last bit of page content on mobile. */}
       <div className="h-16 md:hidden" aria-hidden />
