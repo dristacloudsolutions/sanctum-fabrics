@@ -348,7 +348,10 @@ function CheckoutForm() {
           }
         },
         modal: {
-          ondismiss: () => setPlacing(false),
+          ondismiss: () => {
+            setPlacing(false);
+            setError('Payment was not completed, so your order has not been placed. Your cart is saved — tap Place Order to try again.');
+          },
         },
       });
       rzp.open();
