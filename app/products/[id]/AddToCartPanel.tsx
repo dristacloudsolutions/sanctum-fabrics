@@ -266,8 +266,9 @@ export default function AddToCartPanel({
         );
       })}
 
-      <div className="flex items-center gap-4">
-        <div className="flex items-center rounded-full border border-[color:var(--border)]">
+      {/* Quantity, Add to Cart and wishlist on one line. */}
+      <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center rounded-full border border-[color:var(--border)]">
           <button
             type="button"
             onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -284,12 +285,31 @@ export default function AddToCartPanel({
             +
           </button>
         </div>
-        {outOfStock && (
-          <span className={`text-xs font-semibold uppercase tracking-wide ${isPreorder ? 'text-indigo-500' : 'text-red-500'}`}>
-            {isPreorder ? 'Available for pre-order' : 'Out of stock'}
-          </span>
-        )}
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={submitting || !canAdd}
+          className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full sm:flex-none bg-[color:var(--primary)] px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+        >
+          {added || alreadyInCart ? <Check size={16} /> : <ShoppingBag size={16} />}
+          {added ? (isPreorder ? 'Pre-order placed' : 'Added to cart') : submitting ? 'Adding…' : alreadyInCart ? 'Added in Cart' : isPreorder ? 'Pre-order Now' : 'Add to Cart'}
+        </button>
+        <button
+          type="button"
+          onClick={handleWishlistToggle}
+          aria-label={wishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
+          className={`inline-flex shrink-0 items-center justify-center rounded-full border p-3 transition-colors ${
+            wishlisted ? 'border-[color:var(--accent)] text-[color:var(--accent)]' : 'border-[color:var(--ink)]/20 text-[color:var(--ink)]/60 hover:border-[color:var(--ink)]/40'
+          }`}
+        >
+          <Heart size={18} fill={wishlisted ? 'currentColor' : 'none'} />
+        </button>
       </div>
+      {outOfStock && (
+        <p className={`text-xs font-semibold uppercase tracking-wide ${isPreorder ? 'text-indigo-500' : 'text-red-500'}`}>
+          {isPreorder ? 'Available for pre-order' : 'Out of stock'}
+        </p>
+      )}
 
       {needsSelection && !error && (
         <p className="text-sm text-[color:var(--ink)]/50">Select {attributeKeys.map((k) => k.replace(/_/g, ' ')).join(' and ')} to continue.</p>
@@ -297,30 +317,8 @@ export default function AddToCartPanel({
       {error && <p className="text-sm text-red-500">{error}</p>}
       {wishlistError && <p className="text-sm text-red-500">{wishlistError}</p>}
 
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={submitting || !canAdd}
-          className="inline-flex items-center gap-2 rounded-full bg-[color:var(--primary)] px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
-        >
-          {added || alreadyInCart ? <Check size={16} /> : <ShoppingBag size={16} />}
-          {added ? (isPreorder ? 'Pre-order placed' : 'Added to cart') : submitting ? 'Adding…' : alreadyInCart ? 'Added in Cart' : isPreorder ? 'Pre-order Now' : 'Add to Cart'}
-        </button>
-
-        <button
-          type="button"
-          onClick={handleWishlistToggle}
-          aria-label={wishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
-          className={`inline-flex items-center justify-center rounded-full border p-3 transition-colors ${
-            wishlisted ? 'border-[color:var(--accent)] text-[color:var(--accent)]' : 'border-[color:var(--ink)]/20 text-[color:var(--ink)]/60 hover:border-[color:var(--ink)]/40'
-          }`}
-        >
-          <Heart size={18} fill={wishlisted ? 'currentColor' : 'none'} />
-        </button>
-
-        {(added || alreadyInCart) && (
-          <>
+      {(added || alreadyInCart) && (
+        <div className="flex flex-wrap gap-3">
             <button
               type="button"
               onClick={() => router.push('/cart')}
@@ -335,9 +333,8 @@ export default function AddToCartPanel({
             >
               Checkout
             </button>
-          </>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Sticky mobile buy bar — keeps price + Add to Cart reachable without
           scrolling back up, once the gallery/description push this panel down. */}
