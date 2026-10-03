@@ -115,7 +115,6 @@ export default function AddToCartPanel({
       return { key, value: values.size === 1 ? Array.from(values)[0] : '' };
     })
     .filter((d) => d.value.trim() !== '');
-  const productCode = product.item_code || matchedVariant?.sku || product.sku;
 
   useEffect(() => {
     onVariantChange?.(matchedVariant);
@@ -166,14 +165,13 @@ export default function AddToCartPanel({
 
   return (
     <div className="mt-6 space-y-5">
-      {(productDetails.length > 0 || productCode) && (
+      {productDetails.length > 0 && (
         <section>
           <h2 className="font-serif text-lg text-[color:var(--ink)]">Product details</h2>
           <ul className="mt-3 list-disc space-y-1.5 pl-5 text-[15px] leading-relaxed text-[color:var(--ink)]/80 marker:text-[color:var(--ink)]/50">
             {productDetails.map(({ key, value }) => (
               <li key={key}>{detailLabel(key)} : {value}</li>
             ))}
-            {productCode && <li>Product Code : {productCode}</li>}
           </ul>
         </section>
       )}
