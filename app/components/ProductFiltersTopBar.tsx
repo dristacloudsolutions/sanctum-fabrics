@@ -52,6 +52,21 @@ export default function ProductFiltersTopBar({
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
+  // The pill row scrolls sideways, which clips anything positioned inside it — so
+  // its dropdowns are pinned to the viewport just under the pill that opened them.
+  const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null);
+  const anchorEl = useRef<HTMLElement | null>(null);
+  const placeAt = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    setAnchor({ top: r.bottom + 8, left: Math.max(8, Math.min(r.left, window.innerWidth - 300)) });
+  };
+  const togglePill = (key: string, e: React.MouseEvent<HTMLElement>) => {
+    if (openDropdown === key) { setOpenDropdown(null); return; }
+    anchorEl.current = e.currentTarget;
+    placeAt(e.currentTarget);
+    setOpenDropdown(key);
+  };
+  const pinned = anchor ? { position: 'fixed' as const, top: anchor.top, left: anchor.left } : undefined;
 
   // Local draft states for popovers that have "Apply"
   const [localSearch, setLocalSearch] = useState(searchParams.get('q') || '');
@@ -79,11 +94,20 @@ export default function ProductFiltersTopBar({
         setMobileDrawerOpen(false);
       }
     }
+    // Page or pill-row scrolled: keep the open dropdown under its pill.
+    function handleScroll(e: Event) {
+      if ((e.target as HTMLElement)?.closest?.('[data-pill-dropdown]')) return;
+      if (anchorEl.current) placeAt(anchorEl.current);
+    }
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', handleScroll);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', handleScroll);
     };
   }, []);
 
@@ -250,7 +274,7 @@ export default function ProductFiltersTopBar({
       {/* ─── Sticky Top Filter Bar ─────────────────────────────────────────── */}
       <div
         ref={barRef}
-        className="sticky top-[73px] sm:top-[105px] z-40 w-full border-b border-[color:var(--border)] bg-[color:var(--cream)]/95 backdrop-blur-md transition-shadow"
+        className="sticky top-[73px] sm:top-[105px] z-40 w-full border-b border-[color:var(--border)] bg-[color:var(--cream)] transition-shadow"
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-2.5">
           <div className="flex items-center justify-between gap-3">
@@ -282,7 +306,7 @@ export default function ProductFiltersTopBar({
                 <div className="relative shrink-0">
                   <button
                     type="button"
-                    onClick={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
+                    onClick={(e) => togglePill('category', e)}
                     className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                       currentCategory
                         ? 'border-[color:var(--accent)] bg-[color:var(--accent)]/10 text-[color:var(--accent)] font-semibold'
@@ -297,7 +321,7 @@ export default function ProductFiltersTopBar({
                   </button>
 
                   {openDropdown === 'category' && (
-                    <div className="absolute left-0 top-full mt-2 w-64 max-h-80 overflow-y-auto rounded-2xl border border-[color:var(--border)] bg-white p-2.5 shadow-xl z-50">
+                    <div data-pill-dropdown style={pinned} className="w-64 max-h-80 overflow-y-auto rounded-2xl border border-[color:var(--border)] bg-white p-2.5 shadow-xl z-50">
                       <div className="border-b border-[color:var(--border)] pb-1.5 mb-1.5">
                         <button
                           type="button"
@@ -354,7 +378,7 @@ export default function ProductFiltersTopBar({
               <div className="relative shrink-0">
                 <button
                   type="button"
-                  onClick={() => setOpenDropdown(openDropdown === 'price' ? null : 'price')}
+                  onClick={(e) => togglePill('price', e)}
                   className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                     currentMinPrice || currentMaxPrice
                       ? 'border-[color:var(--accent)] bg-[color:var(--accent)]/10 text-[color:var(--accent)] font-semibold'
@@ -377,7 +401,7 @@ export default function ProductFiltersTopBar({
                 </button>
 
                 {openDropdown === 'price' && (
-                  <div className="absolute left-0 top-full mt-2 w-72 rounded-2xl border border-[color:var(--border)] bg-white p-4 shadow-xl z-50">
+                  <div data-pill-dropdown style={pinned} className="w-72 rounded-2xl border border-[color:var(--border)] bg-white p-4 shadow-xl z-50">
                     <span className="block text-[11px] font-bold uppercase tracking-wider text-[color:var(--ink)]/60 mb-2.5">
                       Price Range
                     </span>
@@ -463,7 +487,7 @@ export default function ProductFiltersTopBar({
                       <>
                         <button
                           type="button"
-                          onClick={() => setOpenDropdown(openDropdown === 'color' ? null : 'color')}
+                          onClick={(e) => togglePill('color', e)}
                           className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                             isActive
                               ? 'border-[color:var(--accent)] bg-[color:var(--accent)]/10 text-[color:var(--accent)] font-semibold'
@@ -484,7 +508,7 @@ export default function ProductFiltersTopBar({
                         </button>
 
                         {openDropdown === 'color' && (
-                          <div className="absolute left-0 top-full mt-2 w-72 max-h-80 overflow-y-auto rounded-2xl border border-[color:var(--border)] bg-white p-3.5 shadow-xl z-50">
+                          <div data-pill-dropdown style={pinned} className="w-72 max-h-80 overflow-y-auto rounded-2xl border border-[color:var(--border)] bg-white p-3.5 shadow-xl z-50">
                             <div className="flex items-center justify-between border-b border-[color:var(--border)] pb-2 mb-2">
                               <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--ink)]/60">
                                 Colors
@@ -562,7 +586,7 @@ export default function ProductFiltersTopBar({
                   <div key={facet.key} className="relative shrink-0">
                     <button
                       type="button"
-                      onClick={() => setOpenDropdown(openDropdown === dropdownKey ? null : dropdownKey)}
+                      onClick={(e) => togglePill(dropdownKey, e)}
                       className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                         isActive
                           ? 'border-[color:var(--accent)] bg-[color:var(--accent)]/10 text-[color:var(--accent)] font-semibold'
@@ -577,7 +601,7 @@ export default function ProductFiltersTopBar({
                     </button>
 
                     {openDropdown === dropdownKey && (
-                      <div className="absolute left-0 top-full mt-2 w-64 max-h-80 overflow-y-auto rounded-2xl border border-[color:var(--border)] bg-white p-3.5 shadow-xl z-50">
+                      <div data-pill-dropdown style={pinned} className="w-64 max-h-80 overflow-y-auto rounded-2xl border border-[color:var(--border)] bg-white p-3.5 shadow-xl z-50">
                         <div className="flex items-center justify-between border-b border-[color:var(--border)] pb-2 mb-2">
                           <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--ink)]/60">
                             {facet.label}
