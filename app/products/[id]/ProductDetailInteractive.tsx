@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Check, MessageCircle, Share2 } from 'lucide-react';
-import { productUrl, type Product, type ProductVariant } from '@/lib/dristaService';
+import { productUrl, sortAttributeKeys, type Product, type ProductVariant } from '@/lib/dristaService';
 import { buildWhatsAppLink, productOrderMessage } from '@/lib/whatsapp';
 import ProductGallery from './ProductGallery';
 import AddToCartPanel from './AddToCartPanel';
@@ -16,7 +16,8 @@ export default function ProductDetailInteractive({ product }: { product: Product
   const productCode = product.item_code || variant?.sku || product.sku;
   // "Color: Maroon, Length: 2.4 Meters" — hex companions of colour names left out.
   const variantText = variant
-    ? Object.entries(variant.attributes || {})
+    ? sortAttributeKeys(Object.keys(variant.attributes || {}), product.metadata?.attribute_order)
+        .map((k) => [k, (variant.attributes || {})[k]] as [string, unknown])
         .filter(([k, v]) => !k.trim().toLowerCase().endsWith(' hex') && v !== null && v !== undefined && String(v).trim() !== '')
         .map(([k, v]) => `${k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}: ${v}`)
         .join(', ')

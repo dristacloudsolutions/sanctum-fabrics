@@ -40,7 +40,7 @@ export type Product = {
   variants?: ProductVariant[];
   // metadata.info_attribute_keys (lowercased): variant attribute keys the admin
   // marked "Info only" — shown as details, never as a choice to pick.
-  metadata?: { info_attribute_keys?: string[]; featured?: boolean; [key: string]: unknown } | null;
+  metadata?: { info_attribute_keys?: string[]; featured?: boolean; attribute_order?: string[]; [key: string]: unknown } | null;
 };
 
 export type CartLineItem = {
@@ -833,4 +833,12 @@ export async function listShippingOptions(cartId: string, pincode: string, token
     token,
   });
   return (payload.data || []) as ShippingOption[];
+}
+
+/** Sorts attribute keys by the order chosen in admin (metadata.attribute_order); others keep their place after. */
+export function sortAttributeKeys(keys: string[], order?: string[] | null): string[] {
+  const o = (order || []).map((k) => String(k).toLowerCase());
+  if (!o.length) return keys;
+  const rank = (k: string) => { const i = o.indexOf(k.trim().toLowerCase()); return i === -1 ? o.length : i; };
+  return keys.map((k, i) => ({ k, i })).sort((a, b) => rank(a.k) - rank(b.k) || a.i - b.i).map((x) => x.k);
 }

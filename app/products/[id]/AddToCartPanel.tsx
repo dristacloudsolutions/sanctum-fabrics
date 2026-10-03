@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, Check, Heart } from 'lucide-react';
-import { Product, ProductVariant, getVariantAttribute } from '@/lib/dristaService';
+import { Product, ProductVariant, getVariantAttribute, sortAttributeKeys } from '@/lib/dristaService';
 import { colorSwatchHex, splitColorList } from '@/lib/colorSwatches';
 import { useCart } from '@/app/contexts/CartContext';
 import { useWishlist } from '@/app/contexts/WishlistContext';
@@ -66,7 +66,7 @@ export default function AddToCartPanel({
       if (lower.endsWith(' hex')) return;
       if (!seen.has(lower)) seen.set(lower, k.trim());
     }));
-    const all = Array.from(seen.values());
+    const all = sortAttributeKeys(Array.from(seen.values()), product.metadata?.attribute_order);
     return {
       allKeys: all,
       attributeKeys: all.filter((k) => !infoOnly.has(k.toLowerCase())),
