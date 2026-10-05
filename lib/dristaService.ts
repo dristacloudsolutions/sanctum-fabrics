@@ -525,8 +525,10 @@ export async function registerCustomer(data: {
 
 // Accepts either identifier — phone is now the primary way customers sign in,
 // but existing accounts (or ones that did set an email) can still use email.
+// The storefront's own sign-in: only Sanctum's customer accounts, never the same email/phone's
+// account in another organisation on the platform (the shared /v1/auth/login searches them all).
 export async function loginCustomer(data: { phone?: string; email?: string; password: string }): Promise<CustomerSession> {
-  const payload = await dristaAction('/v1/auth/login', { method: 'POST', body: JSON.stringify(data) });
+  const payload = await dristaAction('/v1/ecommerce/auth/login', { method: 'POST', body: JSON.stringify(data) });
   return payload.data as CustomerSession;
 }
 
@@ -552,8 +554,9 @@ export async function verifyCustomerOtp(data: {
   return payload.data as CustomerSession;
 }
 
+// Sanctum's own account only, with the reset link on this site.
 export async function requestPasswordReset(email: string): Promise<void> {
-  await dristaAction('/v1/auth/forgot-password', {
+  await dristaAction('/v1/ecommerce/auth/forgot-password', {
     method: 'POST',
     body: JSON.stringify({ email }),
   });
