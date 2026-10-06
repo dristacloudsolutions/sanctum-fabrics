@@ -15,8 +15,16 @@ export type ProductVariant = {
   selling_price: number;
   current_stock: number;
   is_active: boolean;
+  /** The main photo (the first of image_urls). */
   image_url?: string;
+  /** All of the variant's photos, main first. */
+  image_urls?: string[];
 };
+
+/** A variant's photos, main first (older data has only image_url). */
+export function variantPhotos(v: Pick<ProductVariant, 'image_url' | 'image_urls'>): string[] {
+  return v.image_urls?.length ? v.image_urls : v.image_url ? [v.image_url] : [];
+}
 
 export type Product = {
   id: string;
@@ -398,7 +406,11 @@ function withResolvedImages(product: Product): Product {
     // — this was missing, so a variant's raw storage path never loaded as an
     // <img src> on the product card or gallery, only on cart line items
     // (which already resolve it elsewhere in this file).
-    variants: product.variants?.map((v) => ({ ...v, image_url: resolveImageUrl(v.image_url) })),
+    variants: product.variants?.map((v) => ({
+      ...v,
+      image_url: resolveImageUrl(v.image_url),
+      image_urls: (v.image_urls || []).map((u) => resolveImageUrl(u)).filter((u): u is string => !!u),
+    })),
   };
 }
 

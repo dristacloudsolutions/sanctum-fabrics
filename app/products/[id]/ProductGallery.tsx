@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, ZoomIn, ChevronLeft, ChevronRight, Play } from 'lucide-react';
-import type { ProductImage, ProductVideo, ProductVariant } from '@/lib/dristaService';
+import { variantPhotos, type ProductImage, type ProductVideo, type ProductVariant } from '@/lib/dristaService';
 import SmartFitImage from '../../components/SmartFitImage';
 
 const LENS_SIZE = 160; // px — the magnifier's visible diameter
@@ -35,33 +35,35 @@ export default function ProductGallery({
   variants = [],
   productName,
   overrideImageUrl,
+  selectedVariant,
 }: {
   images: ProductImage[];
   videos?: ProductVideo[];
   variants?: ProductVariant[];
   productName: string;
   overrideImageUrl?: string;
+  /** The variant picked in the panel: all of its photos lead the gallery. */
+  selectedVariant?: ProductVariant | null;
 }) {
   const productImages = images.filter((img) => img.url);
-  const seenUrls = new Set(productImages.map((img) => img.url));
-  // Every active variant's own photo joins the strip alongside the product's
-  // general photos — a shopper browsing colors/sizes can see every option's
-  // look without having to pick each one from the panel first. Skips a
-  // variant photo that's identical to one already in the product gallery.
-  const variantImages = variants
-    .filter((v) => v.is_active && v.image_url)
-    .filter((v) => {
-      // Also dedupes two variants that happen to share the exact same photo,
-      // not just against the product's own images.
-      if (seenUrls.has(v.image_url!)) return false;
-      seenUrls.add(v.image_url!);
-      return true;
-    })
-    .map((v): MediaItem => ({ kind: 'image', url: v.image_url!, alt: variantLabel(v) || productName }));
-
+  // The picked variant's photos come first (all of them), then the product's
+  // general photos, then every other active variant's main photo — a shopper
+  // browsing colors/sizes can still see each option's look without picking
+  // it first. A photo that appears twice is shown once.
+  const selectedPhotos = selectedVariant ? variantPhotos(selectedVariant) : [];
+  const seenUrls = new Set<string>();
+  const once = (url?: string) => {
+    if (!url || seenUrls.has(url)) return false;
+    seenUrls.add(url);
+    return true;
+  };
+  const selectedLabel = selectedVariant ? variantLabel(selectedVariant) || productName : productName;
   const media: MediaItem[] = [
-    ...productImages.map((img): MediaItem => ({ kind: 'image', url: img.url!, alt: img.alt_text })),
-    ...variantImages,
+    ...selectedPhotos.filter(once).map((url): MediaItem => ({ kind: 'image', url, alt: selectedLabel })),
+    ...productImages.filter((img) => once(img.url)).map((img): MediaItem => ({ kind: 'image', url: img.url!, alt: img.alt_text })),
+    ...variants
+      .filter((v) => v.is_active && v.id !== selectedVariant?.id && once(v.image_url))
+      .map((v): MediaItem => ({ kind: 'image', url: v.image_url!, alt: variantLabel(v) || productName })),
     ...videos.filter((vid) => vid.url).map((vid): MediaItem => ({ kind: 'video', url: vid.url!, title: vid.title })),
   ];
 
@@ -73,7 +75,10 @@ export default function ProductGallery({
   // array index 0 — the admin doesn't necessarily upload the primary photo
   // first, so this kept opening on a different picture than the one the
   // shopper clicked from the card.
+  // The page re-keys the gallery per picked variant, so this also runs when the
+  // shopper picks another one: open on its first photo when it has photos.
   const initialIndex = (() => {
+    if (selectedPhotos.length) return 0;
     const overrideIdx = findMediaIndex(overrideImageUrl);
     if (overrideIdx !== -1) return overrideIdx;
     return Math.max(0, productImages.findIndex((img) => img.is_primary));
