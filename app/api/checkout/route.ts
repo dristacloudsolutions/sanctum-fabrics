@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { checkout } from '@/lib/dristaService';
 import { getToken } from '@/lib/session';
 import { resolveCart } from '@/lib/cart-helpers';
+import { readAttribution } from '@/lib/attribution';
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,7 +22,8 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const order = await checkout(cartId, body, token);
+    // Where the shopper came from (a social post, a campaign…) goes with the order.
+    const order = await checkout(cartId, { ...body, attribution: await readAttribution() }, token);
 
     // Only clear the cart cookie immediately if COD.
     // For online payments, keep the cart cookie intact until payment is verified,

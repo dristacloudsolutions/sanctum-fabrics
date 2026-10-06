@@ -15,8 +15,16 @@ export type ProductVariant = {
   selling_price: number;
   current_stock: number;
   is_active: boolean;
+  /** The main photo (the first of image_urls). */
   image_url?: string;
+  /** All of the variant's photos, main first. */
+  image_urls?: string[];
 };
+
+/** A variant's photos, main first (older data has only image_url). */
+export function variantPhotos(v: Pick<ProductVariant, 'image_url' | 'image_urls'>): string[] {
+  return v.image_urls?.length ? v.image_urls : v.image_url ? [v.image_url] : [];
+}
 
 export type Product = {
   id: string;
@@ -398,7 +406,11 @@ function withResolvedImages(product: Product): Product {
     // — this was missing, so a variant's raw storage path never loaded as an
     // <img src> on the product card or gallery, only on cart line items
     // (which already resolve it elsewhere in this file).
-    variants: product.variants?.map((v) => ({ ...v, image_url: resolveImageUrl(v.image_url) })),
+    variants: product.variants?.map((v) => ({
+      ...v,
+      image_url: resolveImageUrl(v.image_url),
+      image_urls: (v.image_urls || []).map((u) => resolveImageUrl(u)).filter((u): u is string => !!u),
+    })),
   };
 }
 
@@ -525,8 +537,10 @@ export async function registerCustomer(data: {
 
 // Accepts either identifier — phone is now the primary way customers sign in,
 // but existing accounts (or ones that did set an email) can still use email.
+// The storefront's own sign-in: only Sanctum's customer accounts, never the same email/phone's
+// account in another organisation on the platform (the shared /v1/auth/login searches them all).
 export async function loginCustomer(data: { phone?: string; email?: string; password: string }): Promise<CustomerSession> {
-  const payload = await dristaAction('/v1/auth/login', { method: 'POST', body: JSON.stringify(data) });
+  const payload = await dristaAction('/v1/ecommerce/auth/login', { method: 'POST', body: JSON.stringify(data) });
   return payload.data as CustomerSession;
 }
 
@@ -552,8 +566,9 @@ export async function verifyCustomerOtp(data: {
   return payload.data as CustomerSession;
 }
 
+// Sanctum's own account only, with the reset link on this site.
 export async function requestPasswordReset(email: string): Promise<void> {
-  await dristaAction('/v1/auth/forgot-password', {
+  await dristaAction('/v1/ecommerce/auth/forgot-password', {
     method: 'POST',
     body: JSON.stringify({ email }),
   });
@@ -703,6 +718,8 @@ export async function checkout(
     // Guest checkout only — ignored by the backend when a token identifies a
     // logged-in customer instead.
     guest_name?: string; guest_email?: string; guest_phone?: string;
+    /** UTM tags the shopper arrived with (lib/attribution). */
+    attribution?: Record<string, string>;
   },
   token?: string
 ): Promise<SalesOrder> {
