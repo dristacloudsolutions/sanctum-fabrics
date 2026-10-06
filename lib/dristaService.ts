@@ -706,6 +706,8 @@ export async function checkout(
     // Guest checkout only — ignored by the backend when a token identifies a
     // logged-in customer instead.
     guest_name?: string; guest_email?: string; guest_phone?: string;
+    /** UTM tags the shopper arrived with (lib/attribution). */
+    attribution?: Record<string, string>;
   },
   token?: string
 ): Promise<SalesOrder> {
